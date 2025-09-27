@@ -9,7 +9,7 @@ import Chart, { ChartRef } from '../components/Chart';
 import PlaybackControls from '../components/PlaybackControls';
 import TradePanel from '../components/TradePanel';
 import TradeLog from '../components/TradeLog';
-import { SUPPORTED_INTERVALS, RANGE_LIMITS } from '../lib/config';
+import { SUPPORTED_INTERVALS, RANGE_LIMITS, SEEK_SIZE } from '../lib/config';
 
 
 export default function Home() {
@@ -40,9 +40,10 @@ function StockSimulator() {
     }
   };
 
-  // Keyboard listener for space to toggle play/pause
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Space: toggle play/pause
       if (event.key === ' ') {
         event.preventDefault(); // Prevent page scroll
         if (state.status === 'playing') {
@@ -50,6 +51,36 @@ function StockSimulator() {
         } else {
           setStatus('playing');
         }
+        return;
+      }
+
+      // Arrow keys for navigation
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        if (state.status === 'playing') setStatus('paused');
+        setIndex(Math.max(0, state.index - 1));
+        return;
+      }
+
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        if (state.status === 'playing') setStatus('paused');
+        setIndex(Math.min(state.candles.length - 1, state.index + 1));
+        return;
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (state.status === 'playing') setStatus('paused');
+        setIndex(Math.max(0, state.index - SEEK_SIZE));
+        return;
+      }
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        if (state.status === 'playing') setStatus('paused');
+        setIndex(Math.min(state.candles.length - 1, state.index + SEEK_SIZE));
+        return;
       }
     };
 
@@ -57,7 +88,7 @@ function StockSimulator() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [state.status, setStatus]);
+  }, [state.status, state.index, state.candles.length, setStatus, setIndex]);
 
 
   const handleChangeInterval = async (newInterval: typeof SUPPORTED_INTERVALS[number]) => {
