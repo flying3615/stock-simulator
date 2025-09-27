@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import { useEffect, useRef, useImperativeHandle, forwardRef, useState } from 'react';
 import { createChart, IChartApi, ISeriesApi, CandlestickData, HistogramData } from 'lightweight-charts';
 import { useReplay } from '../lib/context/ReplayContext';
 import type { Candle } from '../lib/types';
@@ -18,12 +18,16 @@ interface ChartProps {
   height?: number;
 }
 
-const Chart = forwardRef<ChartRef, ChartProps>(({ width = 800, height = CHART_HEIGHT }, ref) => {
-  const { state } = useReplay();
+const Chart = forwardRef<ChartRef, ChartProps>(({ width = 1000, height = CHART_HEIGHT }, ref) => {
+  const { state, setIndex } = useReplay();
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
+  const [clipActive, setClipActive] = useState(false);
+  // 视图状态：记录是否已自动适配、用户是否主动缩放/平移
+  const hasAutoFittedRef = useRef(false);
+  const userAdjustedRef = useRef(false);
 
   // 时间转换工具：统一为 v4 可接受的 time 类型
   const toUnixSeconds = (input: any): number => {
@@ -96,11 +100,51 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ width = 800, height = CHART_HE
     candlestickSeriesRef.current = candlestickSeries as any;
     volumeSeriesRef.current = volumeSeries as any;
 
+    // 监听可见范围变化，用于检测用户缩放/平移
+    const ts = chart.timeScale();
+    const onRangeChange = () => {
+      if (!hasAutoFittedRef.current) return; // 初始化阶段的变更不计入用户操作
+      userAdjustedRef.current = true;
+    };
+    ts.subscribeVisibleTimeRangeChange(onRangeChange);
+
     // 清理
     return () => {
+      ts.unsubscribeVisibleTimeRangeChange(onRangeChange);
       chart.remove();
     };
   }, [width, height]);
+
+  // 点击图表以进入“从此之后隐藏并逐根揭示”模式
+  useEffect(() => {
+    const chart = chartRef.current as any;
+    if (!chart) return;
+    const handler = (param: any) => {
+      if (!param || param.time == null) return;
+      const clickedSec =
+        typeof param.time === 'string'
+          ? Math.floor(Date.parse(param.time) / 1000)
+          : Number(param.time);
+
+      // 找到最接近的索引
+      let closestIndex = 0;
+      let minDiff = Infinity;
+      for (let i = 0; i < state.candles.length; i++) {
+        const sec = toUnixSeconds(state.candles[i].time as any);
+        const diff = Math.abs(sec - clickedSec);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestIndex = i;
+        }
+      }
+      setIndex(closestIndex);
+      setClipActive(true);
+    };
+    chart.subscribeClick(handler);
+    return () => {
+      chart.unsubscribeClick(handler);
+    };
+  }, [state.candles, state.interval, setIndex]);
 
   // 更新数据
   useEffect(() => {
@@ -132,14 +176,38 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ width = 800, height = CHART_HE
       };
     });
 
-    candlestickSeriesRef.current.setData(candlestickData);
-    volumeSeriesRef.current.setData(volumeData);
+    // 当处于裁剪模式或正在播放时，按 index 逐根揭示；否则显示全部
+    const incremental = clipActive || state.status === 'playing';
+    const sliceLen = incremental
+      ? Math.min(state.index + 1, candlestickData.length)
+      : candlestickData.length;
 
-    // 适应视图
-    if (chartRef.current) {
-      chartRef.current.timeScale().fitContent();
+    candlestickSeriesRef.current.setData(candlestickData.slice(0, sliceLen));
+    volumeSeriesRef.current.setData(volumeData.slice(0, sliceLen));
+
+    // 播放时自动跟随最后一根K线，保持最新K线在视窗右侧
+    if (chartRef.current && state.status === 'playing') {
+      chartRef.current.timeScale().scrollToPosition(0, true);
     }
-  }, [state.candles]);
+
+    // 首次或加载新数据时自动适配；用户已缩放/平移、播放中或裁剪中不打断
+    if (
+      chartRef.current &&
+      !hasAutoFittedRef.current &&
+      !clipActive &&
+      state.status !== 'playing'
+    ) {
+      chartRef.current.timeScale().fitContent();
+      hasAutoFittedRef.current = true;
+    }
+  }, [state.candles, state.index, clipActive, state.interval]);
+
+  // 数据切换时退出裁剪模式，并重置视图自动适配状态
+  useEffect(() => {
+    setClipActive(false);
+    hasAutoFittedRef.current = false;
+    userAdjustedRef.current = false;
+  }, [state.symbol, state.interval, state.range]);
 
   // 暴露方法
   useImperativeHandle(ref, () => ({

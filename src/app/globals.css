@@ -2,7 +2,7 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0f172a; /* darker for better contrast on white */
 }
 
 @theme inline {
@@ -24,3 +24,7 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* High-contrast overrides for readability on light background */
+.text-gray-600 { color: #334155 !important; } /* slate-700 */
+.text-gray-500 { color: #475569 !important; } /* slate-600 */

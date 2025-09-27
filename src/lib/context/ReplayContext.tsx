@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect, useRef } from 'react';
 import type { ReplayState, Candle } from '../types';
 
 // 动作类型
@@ -76,6 +76,54 @@ const ReplayContext = createContext<ReplayContextType | undefined>(undefined);
 // Provider 组件
 export function ReplayProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(replayReducer, initialReplayState);
+
+  // 播放循环：根据 speed 推进 index
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const indexRef = useRef(0);
+
+  // 同步最新 index 到 ref，避免闭包读到旧值
+  useEffect(() => {
+    indexRef.current = state.index;
+  }, [state.index]);
+
+  // 根据状态与速度驱动播放
+  useEffect(() => {
+    // 清理旧的 interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    if (state.status !== 'playing' || state.candles.length === 0) {
+      return;
+    }
+
+    const intervalMs = Math.max(50, Math.floor(1000 / Math.max(0.25, state.speed))); // 最小50ms保护
+    intervalRef.current = setInterval(() => {
+      const len = state.candles.length;
+      const next = indexRef.current + 1;
+
+      if (next >= len) {
+        // 到末尾：定位最后一根并置为 completed
+        dispatch({ type: 'SET_INDEX', payload: len - 1 });
+        dispatch({ type: 'SET_STATUS', payload: 'completed' });
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      } else {
+        dispatch({ type: 'SET_INDEX', payload: next });
+      }
+    }, intervalMs);
+
+    // 清理
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [state.status, state.speed, state.candles.length]);
 
   const contextValue: ReplayContextType = {
     state,
