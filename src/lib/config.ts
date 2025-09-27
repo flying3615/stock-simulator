@@ -42,10 +42,18 @@ export const API_RATE_LIMIT = 10;
 // 支持的 interval 与 range 映射（基于 yahoo-finance2 有效值）
 export const SUPPORTED_INTERVALS = ['1d', '5m', '1h', '1wk'] as const;
 export const RANGE_LIMITS = {
-  '1d': '1y', // 日线最多 1y
-  '5m': '30d', // 5分钟线最多 30d
-  '1h': '120d', // 1小时最多 120d
-  '1wk': '3y', // 周线最多 3y
+  '1d': '1y', // 日线默认 1y
+  '5m': '30d', // 5分钟线默认 30d
+  '1h': '120d', // 1小时默认 120d
+  '1wk': '3y', // 周线默认 3y
+} as const;
+
+// 支持的 range 选项（按 interval 分组）
+export const SUPPORTED_RANGES = {
+  '5m': ['1d', '5d', '30d'] as const,
+  '1h': ['30d', '60d', '120d'] as const,
+  '1d': ['3mo', '6mo', '1y', '2y', '5y'] as const,
+  '1wk': ['1y', '2y', '3y', '5y'] as const,
 } as const;
 
 // 默认时区（美股）

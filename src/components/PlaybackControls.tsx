@@ -5,15 +5,18 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useReplay } from '../lib/context/ReplayContext';
-import { SEEK_SIZE, SUPPORTED_INTERVALS } from '../lib/config';
+import { SEEK_SIZE, SUPPORTED_INTERVALS, SUPPORTED_RANGES } from '../lib/config';
 
 interface PlaybackControlsProps {
   onChangeInterval?: (interval: typeof SUPPORTED_INTERVALS[number]) => void;
+  onChangeRange?: (range: string) => void;
+  currentRange?: string;
   onStartSelect?: () => void;
   selecting?: boolean;
   onReset?: () => void;
   onFocusIndex?: (index: number) => void;
   onEnableCrop?: () => void;
+  onFitContent?: () => void;
 }
 
 /* ======================= Icons ======================= */
@@ -73,6 +76,14 @@ const IconReset = ({ className = 'h-5 w-5' }: { className?: string }) => (
   </svg>
 );
 
+const IconFit = ({ className = 'h-5 w-5' }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
+    <path d="M21 21l-4.35-4.35" />
+    <circle cx="11" cy="11" r="8" />
+    <path d="M19 11h-6" />
+  </svg>
+);
+
 const btnBase =
   'h-8 px-2 grid place-items-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800/80 active:scale-95 transition';
 
@@ -80,6 +91,19 @@ const btnBase =
 
 const zhInterval = (intv: typeof SUPPORTED_INTERVALS[number]) =>
   intv === '5m' ? '5分钟' : intv === '1h' ? '1小时' : intv === '1wk' ? '1周' : '1天';
+
+const zhRange = (range: string) =>
+  range === '1d' ? '1天' :
+  range === '5d' ? '5天' :
+  range === '30d' ? '30天' :
+  range === '60d' ? '60天' :
+  range === '120d' ? '120天' :
+  range === '3mo' ? '3个月' :
+  range === '6mo' ? '6个月' :
+  range === '1y' ? '1年' :
+  range === '2y' ? '2年' :
+  range === '3y' ? '3年' :
+  range === '5y' ? '5年' : range;
 
 const toUnixSeconds = (input: number | string): number => {
   if (typeof input === 'number') return input > 1e12 ? Math.floor(input / 1000) : input;
@@ -108,16 +132,18 @@ const humanizeSpeedNote = (s: number) => {
 
 /* ======================= Component ======================= */
 
-const PlaybackControls = ({ onChangeInterval, onStartSelect, selecting, onReset, onFocusIndex, onEnableCrop }: PlaybackControlsProps) => {
+const PlaybackControls = ({ onChangeInterval, onChangeRange, currentRange, onStartSelect, selecting, onReset, onFocusIndex, onEnableCrop, onFitContent }: PlaybackControlsProps) => {
   const { state, setStatus, setIndex, setSpeed, reset } = useReplay();
 
   const [openStart, setOpenStart] = useState(false);
   const [openSpeed, setOpenSpeed] = useState(false);
   const [openInterval, setOpenInterval] = useState(false);
+  const [openRange, setOpenRange] = useState(false);
 
   const startRef = useRef<HTMLDivElement>(null);
   const speedRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<HTMLDivElement>(null);
+  const rangeRef = useRef<HTMLDivElement>(null);
 
   // 速度选项（匹配演示图范围）
   const speedOptions = useMemo(() => [10, 7, 5, 3, 1, 0.5, 0.3, 0.2, 0.1], []);
@@ -129,10 +155,11 @@ const PlaybackControls = ({ onChangeInterval, onStartSelect, selecting, onReset,
       if (openStart && startRef.current && !startRef.current.contains(t)) setOpenStart(false);
       if (openSpeed && speedRef.current && !speedRef.current.contains(t)) setOpenSpeed(false);
       if (openInterval && intervalRef.current && !intervalRef.current.contains(t)) setOpenInterval(false);
+      if (openRange && rangeRef.current && !rangeRef.current.contains(t)) setOpenRange(false);
     };
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
-  }, [openStart, openSpeed, openInterval]);
+  }, [openStart, openSpeed, openInterval, openRange]);
 
   const isPlaying = state.status === 'playing';
   const progress = state.candles.length > 1 ? (state.index / (state.candles.length - 1)) * 100 : 0;
@@ -209,8 +236,14 @@ const PlaybackControls = ({ onChangeInterval, onStartSelect, selecting, onReset,
     setOpenInterval(false);
   };
 
+  // 范围切换
+  const handleRangeChange = (range: string) => {
+    if (onChangeRange) onChangeRange(range);
+    setOpenRange(false);
+  };
+
   return (
-    <div className="w-full bg-slate-900/95 text-slate-300 border-t border-slate-800 select-none">
+    <div className="w-full bg-slate-800/90 text-slate-300 border-t border-slate-700 select-none">
       {/* 顶部细进度条 + 可拖动 */}
       <div className="relative">
         <div className="h-0.5 bg-slate-800" />
@@ -232,7 +265,7 @@ const PlaybackControls = ({ onChangeInterval, onStartSelect, selecting, onReset,
         <div className="relative" ref={startRef}>
           <button
             onClick={() => setOpenStart(v => !v)}
-            title="回放起点"
+            title="选择起点"
             aria-haspopup="menu"
             aria-expanded={openStart}
             className={`${btnBase} ${selecting ? 'text-blue-400' : ''}`}
@@ -287,7 +320,7 @@ const PlaybackControls = ({ onChangeInterval, onStartSelect, selecting, onReset,
         <div className="relative" ref={speedRef}>
           <button
             onClick={() => setOpenSpeed(v => !v)}
-            title="回放速度"
+            title="速度"
             aria-haspopup="menu"
             aria-expanded={openSpeed}
             className="h-8 px-2 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 text-sm font-medium"
@@ -330,7 +363,7 @@ const PlaybackControls = ({ onChangeInterval, onStartSelect, selecting, onReset,
           <div className="relative" ref={intervalRef}>
             <button
               onClick={() => setOpenInterval(v => !v)}
-              title="更新周期"
+              title="周期"
               aria-haspopup="menu"
               aria-expanded={openInterval}
               className="h-8 px-2 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 text-sm font-medium"
@@ -362,26 +395,67 @@ const PlaybackControls = ({ onChangeInterval, onStartSelect, selecting, onReset,
           </div>
         )}
 
+        {/* 时间范围（菜单） */}
+        {onChangeRange && currentRange && (
+          <div className="relative" ref={rangeRef}>
+            <button
+              onClick={() => setOpenRange(v => !v)}
+              title="时间范围"
+              aria-haspopup="menu"
+              aria-expanded={openRange}
+              className="h-8 px-2 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 text-sm font-medium"
+            >
+              {zhRange(currentRange)}
+            </button>
+            {openRange && (
+              <div
+                role="menu"
+                className="absolute z-20 bottom-full mb-2 w-32 rounded-md border border-slate-800 bg-slate-900/98 shadow-lg ring-1 ring-black/5 overflow-hidden"
+              >
+                <div className="px-3 py-2 text-xs text-slate-400">时间范围</div>
+                {SUPPORTED_RANGES[state.interval].map(range => {
+                  const selected = range === currentRange;
+                  return (
+                    <button
+                      key={range}
+                      role="menuitemradio"
+                      aria-checked={selected}
+                      onClick={() => handleRangeChange(range)}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-800/70 ${selected ? 'text-white' : ''}`}
+                    >
+                      {zhRange(range)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 分隔 */}
         <div className="mx-1 h-4 w-px bg-slate-800" />
 
         {/* 单步/区间导航 */}
-        <button onClick={handleStepBack} title="上一个K线" className={btnBase} disabled={!hasData || atStart} aria-label="Step Back">
+        <button onClick={handleStepBack} title="上一个" className={btnBase} disabled={!hasData || atStart} aria-label="Step Back">
           <IconStepBack />
         </button>
-        <button onClick={handleSeekBack} title={`后退 ${SEEK_SIZE} 根`} className={btnBase} disabled={!hasData || atStart} aria-label="Seek Back">
+        <button onClick={handleSeekBack} title="快退" className={btnBase} disabled={!hasData || atStart} aria-label="Seek Back">
           <IconSeekBack />
         </button>
-        <button onClick={handleSeekForward} title={`前进 ${SEEK_SIZE} 根`} className={btnBase} disabled={!hasData || atEnd} aria-label="Seek Forward">
+        <button onClick={handleSeekForward} title="快进" className={btnBase} disabled={!hasData || atEnd} aria-label="Seek Forward">
           <IconSeekFwd />
         </button>
-        <button onClick={handleStepForward} title="下一个K线" className={btnBase} disabled={!hasData || atEnd} aria-label="Step Forward">
+        <button onClick={handleStepForward} title="下一个" className={btnBase} disabled={!hasData || atEnd} aria-label="Step Forward">
           <IconStepFwd />
         </button>
 
         <div className="mx-1 h-4 w-px bg-slate-800" />
 
-        <button onClick={onReset} title="退出回放" className={btnBase} disabled={!hasData} aria-label="Reset">
+        <button onClick={onFitContent} title="适配" className={btnBase} disabled={!hasData} aria-label="Fit Content">
+          <IconFit />
+        </button>
+
+        <button onClick={onReset} title="重置" className={btnBase} disabled={!hasData} aria-label="Reset">
           <IconReset />
         </button>
 

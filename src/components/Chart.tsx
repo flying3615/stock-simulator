@@ -13,6 +13,7 @@ export interface ChartRef {
   updateToIndex: (index: number) => void;
   resetCrop: () => void;
   startCrop: () => void;
+  fitContent: () => void;
 }
 
 interface ChartProps {
@@ -318,6 +319,12 @@ useEffect(() => {
     startCrop: () => {
       console.info('[Chart] startCrop() called: enable clipping from current index');
       setClipActive(true);
+    },
+    // 自动适配K线大小
+    fitContent: () => {
+      if (chartRef.current) {
+        chartRef.current.timeScale().fitContent();
+      }
     },
   }));
 

@@ -2,7 +2,7 @@
 
 import yahooFinance from 'yahoo-finance2';
 import type { Candle, OHLCRequest, ErrorShape } from '../types';
-import { SUPPORTED_INTERVALS, RANGE_LIMITS, MAX_CANDLES, DEFAULT_TIMEZONE } from '../config';
+import { SUPPORTED_INTERVALS, RANGE_LIMITS, SUPPORTED_RANGES, MAX_CANDLES, DEFAULT_TIMEZONE } from '../config';
 
 // 输入校验
 function validateRequest(req: OHLCRequest): ErrorShape | null {
@@ -16,9 +16,9 @@ function validateRequest(req: OHLCRequest): ErrorShape | null {
     return { code: 'INVALID_INTERVAL', message: `Interval must be one of: ${SUPPORTED_INTERVALS.join(', ')}` };
   }
 
-  const maxRange = RANGE_LIMITS[interval];
-  if (range !== maxRange) {
-    return { code: 'INVALID_RANGE', message: `Range for ${interval} must be ${maxRange}` };
+  const allowedRanges = SUPPORTED_RANGES[interval];
+  if (!(allowedRanges as readonly string[]).includes(range)) {
+    return { code: 'INVALID_RANGE', message: `Range for ${interval} must be one of: ${allowedRanges.join(', ')}` };
   }
 
   return null;
@@ -76,18 +76,36 @@ export async function getOHLC(
   }
 
   try {
-    // 计算 period1 和 period2 基于 range（与 RANGE_LIMITS 对齐）
+    // 计算 period1 和 period2 基于 range
     const now = new Date();
     let period1: Date;
     switch (range) {
+      case '1d':
+        period1 = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
+        break;
+      case '5d':
+        period1 = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
+        break;
       case '30d':
         period1 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case '60d':
+        period1 = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
         break;
       case '120d':
         period1 = new Date(now.getTime() - 120 * 24 * 60 * 60 * 1000);
         break;
+      case '3mo':
+        period1 = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      case '6mo':
+        period1 = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+        break;
       case '1y':
         period1 = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        break;
+      case '2y':
+        period1 = new Date(now.getTime() - 2 * 365 * 24 * 60 * 60 * 1000);
         break;
       case '3y':
         period1 = new Date(now.getTime() - 3 * 365 * 24 * 60 * 60 * 1000);

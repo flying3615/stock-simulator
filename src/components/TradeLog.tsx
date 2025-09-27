@@ -9,68 +9,60 @@ const TradeLog = () => {
 
   return (
     <div className="p-4 bg-white border rounded-lg shadow-sm">
-      <h3 className="text-lg font-semibold mb-4 text-slate-800">Trade Log</h3>
-
       {trades.length === 0 ? (
-        <p className="text-gray-500">No trades yet.</p>
+        <p className="text-slate-600">No trades yet.</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-2">Time</th>
-                <th className="text-left py-2">Side</th>
-                <th className="text-right py-2">Price</th>
-                <th className="text-right py-2">Qty</th>
-                <th className="text-right py-2">Fee</th>
-                <th className="text-right py-2">Slippage</th>
-                <th className="text-right py-2">Realized P&L</th>
-                <th className="text-right py-2">Position After</th>
-              </tr>
-            </thead>
-            <tbody>
-              {trades.map((trade) => (
-                <tr key={trade.id} className="border-b hover:bg-gray-50">
-                  <td className="py-2">
-                    {new Date(trade.time * 1000).toLocaleString()}
-                  </td>
-                  <td className="py-2 capitalize">
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-medium ${
-                        trade.side === 'buy'
-                          ? 'bg-green-100 text-green-800'
-                          : trade.side === 'sell'
-                          ? 'bg-red-100 text-red-800'
-                          : trade.side === 'short'
-                          ? 'bg-orange-100 text-orange-800'
-                          : 'bg-blue-100 text-blue-800'
-                      }`}
-                    >
-                      {trade.side}
-                    </span>
-                  </td>
-                  <td className="py-2 text-right">${trade.price.toFixed(2)}</td>
-                  <td className="py-2 text-right">{trade.qty}</td>
-                  <td className="py-2 text-right">${trade.fee.toFixed(2)}</td>
-                  <td className="py-2 text-right">${trade.slippage.toFixed(2)}</td>
-                  <td className="py-2 text-right">
-                    <span
-                      className={
-                        trade.pnlRealizedAfter >= 0 ? 'text-green-600' : 'text-red-600'
-                      }
-                    >
-                      ${trade.pnlRealizedAfter.toFixed(2)}
-                    </span>
-                  </td>
-                  <td className="py-2 text-right">
-                    {/* 这里需要持仓后状态，但 Trade 接口没有。需要扩展或从 portfolio 计算 */}
-                    {/* 暂时显示 pnlRealizedAfter 作为代理 */}
-                    N/A
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-3">
+          {trades.map((trade) => (
+            <div key={trade.id} className="border border-slate-200 rounded p-3 bg-slate-50">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-slate-600">
+                  {new Date(trade.time * 1000).toLocaleString()}
+                </span>
+                <span
+                  className={`px-2 py-1 rounded text-xs font-medium ${
+                    trade.side === 'buy'
+                      ? 'bg-green-500 text-white'
+                      : trade.side === 'sell'
+                      ? 'bg-red-500 text-white'
+                      : trade.side === 'short'
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-blue-500 text-white'
+                  }`}
+                >
+                  {trade.side.toUpperCase()}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-slate-500">Price:</span>
+                  <span className="ml-1 font-medium text-slate-900">${trade.price.toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Qty:</span>
+                  <span className="ml-1 font-medium text-slate-900">{trade.qty}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Fee:</span>
+                  <span className="ml-1 font-medium text-slate-900">${trade.fee.toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Slippage:</span>
+                  <span className="ml-1 font-medium text-slate-900">${trade.slippage.toFixed(2)}</span>
+                </div>
+              </div>
+              <div className="mt-2 pt-2 border-t border-slate-200">
+                <span className="text-slate-500">Realized P&L:</span>
+                <span
+                  className={`ml-1 font-medium ${
+                    trade.pnlRealizedAfter >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}
+                >
+                  ${trade.pnlRealizedAfter.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

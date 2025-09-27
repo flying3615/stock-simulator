@@ -84,6 +84,28 @@ function StockSimulator() {
     }
   };
 
+  const handleChangeRange = async (newRange: string) => {
+    setRange(newRange);
+    // Reload data
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/ohlc?symbol=${encodeURIComponent(symbol)}&interval=${interval}&range=${newRange}`
+      );
+      if (!response.ok) {
+        const errorData = await response.json() as any;
+        throw new Error(errorData.error?.message || 'Failed to load data');
+      }
+      const data = await response.json() as any;
+      setData(data.candles, symbol, interval, newRange);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLoad = async () => {
     if (!symbol.trim()) {
       setError('Symbol is required');
@@ -146,11 +168,14 @@ function StockSimulator() {
           </div>
           <PlaybackControls
             onChangeInterval={handleChangeInterval}
+            onChangeRange={handleChangeRange}
+            currentRange={range}
             onStartSelect={() => setSelectMode((v) => !v)}
             selecting={selectMode}
             onReset={handleReset}
             onFocusIndex={(i) => chartRef.current?.updateToIndex(i)}
             onEnableCrop={() => chartRef.current?.startCrop()}
+            onFitContent={() => chartRef.current?.fitContent()}
           />
         </div>
  
@@ -163,7 +188,7 @@ function StockSimulator() {
             />
             <div className="fixed right-0 top-0 z-50 h-full w-[420px] bg-white shadow-xl border-l border-slate-200 flex flex-col">
               <div className="p-3 border-b flex items-center justify-between">
-                <span className="font-medium">Trade Log</span>
+                <span className="font-medium text-slate-800">Trade Log</span>
                 <button
                   onClick={() => setLogOpen(false)}
                   className="px-2 py-1 text-sm rounded bg-slate-700 text-white hover:bg-slate-800"
