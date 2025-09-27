@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ReplayProvider, useReplay } from '../lib/context/ReplayContext';
 import { PortfolioProvider } from '../lib/context/PortfolioContext';
 import Chart from '../components/Chart';
@@ -22,12 +22,31 @@ export default function Home() {
 }
 
 function StockSimulator() {
-  const { setData } = useReplay();
+  const { state, setStatus, setData } = useReplay();
   const [symbol, setSymbol] = useState('AAPL');
   const [interval, setInterval] = useState<'1d' | '5m'>('1d');
   const [range, setRange] = useState('5y');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Keyboard listener for space to toggle play/pause
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === ' ') {
+        event.preventDefault(); // Prevent page scroll
+        if (state.status === 'playing') {
+          setStatus('paused');
+        } else {
+          setStatus('playing');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [state.status, setStatus]);
 
   const handleLoad = async () => {
     if (!symbol.trim()) {
@@ -127,10 +146,14 @@ function StockSimulator() {
           </div>
 
           {/* 右侧面板 */}
-          <div className="space-y-4">
+          <div>
             <TradePanel />
-            <TradeLog />
           </div>
+        </div>
+
+        {/* 成交明细（底部全宽） */}
+        <div className="mt-4">
+          <TradeLog />
         </div>
       </div>
     </div>
