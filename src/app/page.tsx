@@ -120,8 +120,8 @@ function StockSimulator() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           {/* 图表区（左侧大区） */}
           <div className="lg:col-span-3 space-y-4">
-            <div className="bg-white p-4 rounded-lg shadow-sm">
-              <Chart width={800} height={400} />
+            <div className="bg-white p-4 rounded-lg shadow-sm h-[400px]">
+              <Chart />
             </div>
             <PlaybackControls />
           </div>
