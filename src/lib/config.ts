@@ -39,10 +39,14 @@ export const MAX_CANDLES = 10000; // 最大K线条数（防止内存溢出）
 export const API_RATE_LIMIT = 10;
 
 // 支持的 interval 与 range 映射
-export const SUPPORTED_INTERVALS = ['1d', '5m'] as const;
+export const SUPPORTED_INTERVALS = ['1d', '5m', '1h', '2h', '4h', '1wk'] as const;
 export const RANGE_LIMITS = {
   '1d': '5y', // 日线最多 5y
   '5m': '30d', // 5分钟线最多 30d
+  '1h': '2y', // 1小时最多 2y
+  '2h': '2y', // 2小时最多 2y
+  '4h': '2y', // 4小时最多 2y
+  '1wk': '10y', // 周线最多 10y
 } as const;
 
 // 默认时区（美股）

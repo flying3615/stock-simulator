@@ -4,13 +4,15 @@
 
 import React, { createContext, useContext, useReducer, ReactNode, useEffect, useRef } from 'react';
 import type { ReplayState, Candle } from '../types';
+import { SUPPORTED_INTERVALS } from '../config';
 
 // 动作类型
 type ReplayAction =
-  | { type: 'SET_DATA'; payload: { candles: Candle[]; symbol: string; interval: '1d' | '5m'; range: string } }
+  | { type: 'SET_DATA'; payload: { candles: Candle[]; symbol: string; interval: typeof SUPPORTED_INTERVALS[number]; range: string } }
   | { type: 'SET_INDEX'; payload: number }
   | { type: 'SET_SPEED'; payload: number }
   | { type: 'SET_STATUS'; payload: ReplayState['status'] }
+  | { type: 'SET_INTERVAL'; payload: typeof SUPPORTED_INTERVALS[number] }
   | { type: 'RESET' };
 
 // Reducer
@@ -36,6 +38,8 @@ function replayReducer(state: ReplayState, action: ReplayAction): ReplayState {
       return { ...state, speed: action.payload };
     case 'SET_STATUS':
       return { ...state, status: action.payload };
+    case 'SET_INTERVAL':
+      return { ...state, interval: action.payload };
     case 'RESET':
       return {
         ...state,
@@ -63,10 +67,11 @@ interface ReplayContextType {
   state: ReplayState;
   dispatch: React.Dispatch<ReplayAction>;
   // 便捷方法
-  setData: (candles: Candle[], symbol: string, interval: '1d' | '5m', range: string) => void;
+  setData: (candles: Candle[], symbol: string, interval: typeof SUPPORTED_INTERVALS[number], range: string) => void;
   setIndex: (index: number) => void;
   setSpeed: (speed: number) => void;
   setStatus: (status: ReplayState['status']) => void;
+  setInterval: (interval: typeof SUPPORTED_INTERVALS[number]) => void;
   reset: () => void;
 }
 
@@ -133,6 +138,7 @@ export function ReplayProvider({ children }: { children: ReactNode }) {
     setIndex: (index) => dispatch({ type: 'SET_INDEX', payload: index }),
     setSpeed: (speed) => dispatch({ type: 'SET_SPEED', payload: speed }),
     setStatus: (status) => dispatch({ type: 'SET_STATUS', payload: status }),
+    setInterval: (interval) => dispatch({ type: 'SET_INTERVAL', payload: interval }),
     reset: () => dispatch({ type: 'RESET' }),
   };
 

@@ -4,9 +4,13 @@
 
 import React from 'react';
 import { useReplay } from '../lib/context/ReplayContext';
-import { SPEED_PRESETS, SEEK_SIZE } from '../lib/config';
+import { SPEED_PRESETS, SEEK_SIZE, SUPPORTED_INTERVALS } from '../lib/config';
 
-const PlaybackControls = () => {
+interface PlaybackControlsProps {
+  onChangeInterval?: (interval: typeof SUPPORTED_INTERVALS[number]) => void;
+}
+
+const PlaybackControls = ({ onChangeInterval }: PlaybackControlsProps) => {
   const { state, setStatus, setIndex, setSpeed, reset } = useReplay();
 
   const handlePlayPause = () => {
@@ -109,6 +113,26 @@ const PlaybackControls = () => {
           </button>
         ))}
       </div>
+
+      {/* 时间周期选择 */}
+      {onChangeInterval && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">Interval:</span>
+          {SUPPORTED_INTERVALS.map((int) => (
+            <button
+              key={int}
+              onClick={() => onChangeInterval(int)}
+              className={`px-2 py-1 text-sm rounded ${
+                state.interval === int
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              {int === '1d' ? '1D' : int === '5m' ? '5M' : int === '1h' ? '1H' : int === '2h' ? '2H' : int === '4h' ? '4H' : '1W'}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 进度条 */}
       <div className="flex items-center gap-2">

@@ -22,9 +22,9 @@ export default function Home() {
 }
 
 function StockSimulator() {
-  const { state, setStatus, setData, setIndex } = useReplay();
+  const { state, setStatus, setData, setIndex, setInterval: setIntervalContext } = useReplay();
   const [symbol, setSymbol] = useState('AAPL');
-  const [interval, setInterval] = useState<'1d' | '5m'>('1d');
+  const [interval, setInterval] = useState<typeof SUPPORTED_INTERVALS[number]>('1d');
   const [range, setRange] = useState('5y');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +66,30 @@ function StockSimulator() {
       }
     });
     setIndex(closestIndex);
+  };
+
+  const handleChangeInterval = async (newInterval: typeof SUPPORTED_INTERVALS[number]) => {
+    setInterval(newInterval);
+    setRange(RANGE_LIMITS[newInterval]);
+    // Reload data
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/ohlc?symbol=${encodeURIComponent(symbol)}&interval=${newInterval}&range=${RANGE_LIMITS[newInterval]}`
+      );
+      if (!response.ok) {
+        const errorData = await response.json() as any;
+        throw new Error(errorData.error?.message || 'Failed to load data');
+      }
+      const data = await response.json() as any;
+      setData(data.candles, symbol, newInterval, RANGE_LIMITS[newInterval]);
+      setIntervalContext(newInterval);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLoad = async () => {
@@ -176,7 +200,7 @@ function StockSimulator() {
             <div className="bg-white p-4 rounded-lg shadow-sm h-[400px]">
               <Chart />
             </div>
-            <PlaybackControls />
+            <PlaybackControls onChangeInterval={handleChangeInterval} />
           </div>
 
           {/* 右侧面板 */}

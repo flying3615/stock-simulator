@@ -38,7 +38,7 @@ export interface ReplayState {
   speed: number; // 播放速度倍数（0.5x,1x,2x,4x）
   status: 'idle' | 'playing' | 'paused' | 'completed'; // 状态机
   symbol: string; // 股票代码
-  interval: '1d' | '5m'; // 粒度
+  interval: '1d' | '5m' | '1h' | '2h' | '4h' | '1wk'; // 粒度
   range: string; // 范围（如 '5y', '30d'）
   candles: Candle[]; // K线数据数组
 }
@@ -78,7 +78,7 @@ export interface ErrorShape {
 // API 请求参数（GET /api/ohlc）
 export interface OHLCRequest {
   symbol: string;
-  interval: '1d' | '5m';
+  interval: '1d' | '5m' | '1h' | '2h' | '4h' | '1wk';
   range: string; // 如 '5y', '30d'
   tz?: string; // 时区（如 'America/New_York'）
 }
