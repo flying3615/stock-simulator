@@ -18,7 +18,7 @@ interface ChartProps {
   height?: number;
 }
 
-const Chart = forwardRef<ChartRef, ChartProps>(({ width = 1000, height = CHART_HEIGHT }, ref) => {
+const Chart = forwardRef<ChartRef, ChartProps>(({}, ref) => {
   const { state, setIndex } = useReplay();
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -51,7 +51,11 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ width = 1000, height = CHART_H
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    const chart = createChart(chartContainerRef.current, {
+    const container = chartContainerRef.current;
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
+    const chart = createChart(container, {
       width,
       height,
       layout: {
@@ -72,6 +76,9 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ width = 1000, height = CHART_H
         borderColor: '#cccccc',
         timeVisible: true,
         secondsVisible: false,
+        // 让右侧默认留白，且不要在新增bar时自动把最后一根顶到最右
+        rightOffset: 10,
+        shiftVisibleRangeOnNewBar: false,
       },
     });
 
@@ -113,7 +120,7 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ width = 1000, height = CHART_H
       ts.unsubscribeVisibleTimeRangeChange(onRangeChange);
       chart.remove();
     };
-  }, [width, height]);
+  }, []);
 
   // 点击图表以进入“从此之后隐藏并逐根揭示”模式
   useEffect(() => {
@@ -185,9 +192,23 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ width = 1000, height = CHART_H
     candlestickSeriesRef.current.setData(candlestickData.slice(0, sliceLen));
     volumeSeriesRef.current.setData(volumeData.slice(0, sliceLen));
 
-    // 播放时自动跟随最后一根K线，保持最新K线在视窗右侧
+    // 播放时将最后一根K线固定在可见区域的 3/4 处：
+    // 使用 setVisibleLogicalRange 直接设定范围，避免被 scrollTo... 顶到最右
     if (chartRef.current && state.status === 'playing') {
-      chartRef.current.timeScale().scrollToPosition(0, true);
+      const ts = chartRef.current.timeScale();
+      const lr = ts.getVisibleLogicalRange();
+      const lastIndex = sliceLen - 1; // 当前已揭示的最后一根
+      // 当前可见宽度（逻辑索引单位）
+      const visibleWidth =
+        lr && isFinite((lr as any).from) && isFinite((lr as any).to)
+          ? Math.max(5, (lr as any).to - (lr as any).from)
+          : 100;
+      // 让 lastIndex 处在右侧的 85%（from 占 85%，to 占 15%）
+      const from = lastIndex - visibleWidth * 0.85;
+      const to = lastIndex + visibleWidth * 0.15;
+      // 禁止“新bar时自动顶到最右”
+      (ts as any).applyOptions?.({ shiftVisibleRangeOnNewBar: false });
+      ts.setVisibleLogicalRange({ from, to });
     }
 
     // 首次或加载新数据时自动适配；用户已缩放/平移、播放中或裁剪中不打断
@@ -219,7 +240,7 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ width = 1000, height = CHART_H
     },
   }));
 
-  return <div ref={chartContainerRef} />;
+  return <div ref={chartContainerRef} className="w-full h-full" />;
 });
 
 Chart.displayName = 'Chart';

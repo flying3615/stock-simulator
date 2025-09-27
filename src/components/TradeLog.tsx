@@ -9,7 +9,7 @@ const TradeLog = () => {
 
   return (
     <div className="p-4 bg-white border rounded-lg shadow-sm">
-      <h3 className="text-lg font-semibold mb-4">Trade Log</h3>
+      <h3 className="text-lg font-semibold mb-4 text-slate-800">Trade Log</h3>
 
       {trades.length === 0 ? (
         <p className="text-gray-500">No trades yet.</p>

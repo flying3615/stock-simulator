@@ -65,7 +65,7 @@ function mapToCandles(data: any[]): Candle[] {
 // 获取 OHLC 数据
 export async function getOHLC(
   symbol: string,
-  interval: '1d' | '5m',
+  interval: '1d' | '5m' | '1h' | '1wk',
   range: string,
   tz: string = DEFAULT_TIMEZONE
 ): Promise<{ candles: Candle[]; error?: ErrorShape }> {
@@ -76,16 +76,29 @@ export async function getOHLC(
   }
 
   try {
-    // 计算 period1 和 period2 基于 range
+    // 计算 period1 和 period2 基于 range（与 RANGE_LIMITS 对齐）
     const now = new Date();
     let period1: Date;
-    if (range === '5y') {
-      period1 = new Date(now.getTime() - 5 * 365 * 24 * 60 * 60 * 1000);
-    } else if (range === '30d') {
-      period1 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    } else {
-      // 默认 1y
-      period1 = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+    switch (range) {
+      case '30d':
+        period1 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case '120d':
+        period1 = new Date(now.getTime() - 120 * 24 * 60 * 60 * 1000);
+        break;
+      case '1y':
+        period1 = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        break;
+      case '3y':
+        period1 = new Date(now.getTime() - 3 * 365 * 24 * 60 * 60 * 1000);
+        break;
+      case '5y':
+        period1 = new Date(now.getTime() - 5 * 365 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        // 未知范围时，退化为 1y，避免后端报错
+        period1 = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        break;
     }
 
     const result = await yahooFinance.chart(symbol, {

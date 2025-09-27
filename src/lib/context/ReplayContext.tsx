@@ -103,7 +103,8 @@ export function ReplayProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const intervalMs = Math.max(50, Math.floor(1000 / Math.max(0.25, state.speed))); // 最小50ms保护
+    const safeSpeed = Math.max(0.05, state.speed);
+    const intervalMs = Math.max(50, Math.floor(1000 / safeSpeed)); // 最小50ms保护；允许更慢速度（如0.1x=10s/步）
     intervalRef.current = setInterval(() => {
       const len = state.candles.length;
       const next = indexRef.current + 1;

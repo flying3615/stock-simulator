@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
     // 解析查询参数
     const symbol = searchParams.get('symbol');
-    const interval = searchParams.get('interval') as '1d' | '5m';
+    const interval = searchParams.get('interval') as '1d' | '5m' | '1h' | '1wk';
     const range = searchParams.get('range');
     const tz = searchParams.get('tz') || undefined;
 

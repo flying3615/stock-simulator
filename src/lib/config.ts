@@ -23,6 +23,7 @@ export const SPEED_PRESETS: SpeedPreset[] = [
   { label: '1x', value: 1 },
   { label: '2x', value: 2 },
   { label: '4x', value: 4 },
+  { label: '10x', value: 10 },
 ];
 
 // 默认速度
@@ -41,10 +42,10 @@ export const API_RATE_LIMIT = 10;
 // 支持的 interval 与 range 映射（基于 yahoo-finance2 有效值）
 export const SUPPORTED_INTERVALS = ['1d', '5m', '1h', '1wk'] as const;
 export const RANGE_LIMITS = {
-  '1d': '5y', // 日线最多 5y
+  '1d': '1y', // 日线最多 1y
   '5m': '30d', // 5分钟线最多 30d
-  '1h': '2y', // 1小时最多 2y
-  '1wk': '10y', // 周线最多 10y
+  '1h': '120d', // 1小时最多 120d
+  '1wk': '3y', // 周线最多 3y
 } as const;
 
 // 默认时区（美股）
