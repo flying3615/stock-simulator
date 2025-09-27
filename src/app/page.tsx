@@ -24,7 +24,7 @@ export default function Home() {
 function StockSimulator() {
   const { state, setStatus, setData, setIndex, setInterval: setIntervalContext } = useReplay();
   const [symbol, setSymbol] = useState('AAPL');
-  const [interval, setInterval] = useState<typeof SUPPORTED_INTERVALS[number]>('1d');
+  const [interval, setInterval] = useState<'1d' | '5m' | '1h' | '1wk'>('1d');
   const [range, setRange] = useState('5y');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -144,7 +144,7 @@ function StockSimulator() {
               <select
                 value={interval}
                 onChange={(e) => {
-                  const newInterval = e.target.value as '1d' | '5m';
+                  const newInterval = e.target.value as '1d' | '5m' | '1h' | '1wk';
                   setInterval(newInterval);
                   setRange(RANGE_LIMITS[newInterval]); // 自动调整 range
                 }}

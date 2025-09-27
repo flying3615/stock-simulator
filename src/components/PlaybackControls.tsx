@@ -128,7 +128,7 @@ const PlaybackControls = ({ onChangeInterval }: PlaybackControlsProps) => {
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
-              {int === '1d' ? '1D' : int === '5m' ? '5M' : int === '1h' ? '1H' : int === '2h' ? '2H' : int === '4h' ? '4H' : '1W'}
+              {int === '1d' ? '1D' : int === '5m' ? '5M' : int === '1h' ? '1H' : '1W'}
             </button>
           ))}
         </div>

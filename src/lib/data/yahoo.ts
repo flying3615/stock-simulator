@@ -43,14 +43,21 @@ function mapToCandles(data: any[]): Candle[] {
   };
 
   return data
-    .filter(item => item && item.date && item.open !== undefined) // 过滤无效数据
+    .filter(item =>
+      item &&
+      item.date &&
+      typeof item.open === 'number' &&
+      typeof item.high === 'number' &&
+      typeof item.low === 'number' &&
+      typeof item.close === 'number'
+    ) // 过滤无效数据，确保 OHLC 为数字
     .map(item => ({
       time: toUnixSeconds(item.date), // 统一为秒级时间戳，兼容 v4
       open: item.open,
       high: item.high,
       low: item.low,
       close: item.close, // chart API 的 close 已是复权价
-      volume: item.volume || 0,
+      volume: typeof item.volume === 'number' ? item.volume : 0,
     }))
     .slice(0, MAX_CANDLES); // 限制条数
 }
