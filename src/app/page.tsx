@@ -2,10 +2,10 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ReplayProvider, useReplay } from '../lib/context/ReplayContext';
 import { PortfolioProvider } from '../lib/context/PortfolioContext';
-import Chart from '../components/Chart';
+import Chart, { ChartRef } from '../components/Chart';
 import PlaybackControls from '../components/PlaybackControls';
 import TradePanel from '../components/TradePanel';
 import TradeLog from '../components/TradeLog';
@@ -23,7 +23,7 @@ export default function Home() {
 }
 
 function StockSimulator() {
-  const { state, setStatus, setData, setIndex, setInterval: setIntervalContext } = useReplay();
+  const { state, setStatus, setData, setIndex, setInterval: setIntervalContext, reset } = useReplay();
   const [symbol, setSymbol] = useState('AAPL');
   const [interval, setInterval] = useState<'1d' | '5m' | '1h' | '1wk'>('1d');
   const [range, setRange] = useState<string>(RANGE_LIMITS['1d']);
@@ -31,6 +31,14 @@ function StockSimulator() {
   const [error, setError] = useState<string | null>(null);
   const [logOpen, setLogOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
+  const chartRef = useRef<ChartRef>(null);
+
+  const handleReset = () => {
+    reset();
+    if (chartRef.current) {
+      chartRef.current.resetCrop();
+    }
+  };
 
   // Keyboard listener for space to toggle play/pause
   useEffect(() => {
@@ -128,6 +136,7 @@ function StockSimulator() {
         <div className="space-y-4">
           <div className="bg-white p-4 rounded-lg shadow-sm h-[70vh]">
             <Chart
+              ref={chartRef}
               selectMode={selectMode}
               onSelectCandle={(idx) => {
                 setIndex(idx);
@@ -139,6 +148,9 @@ function StockSimulator() {
             onChangeInterval={handleChangeInterval}
             onStartSelect={() => setSelectMode((v) => !v)}
             selecting={selectMode}
+            onReset={handleReset}
+            onFocusIndex={(i) => chartRef.current?.updateToIndex(i)}
+            onEnableCrop={() => chartRef.current?.startCrop()}
           />
         </div>
  

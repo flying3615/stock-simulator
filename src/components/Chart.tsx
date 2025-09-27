@@ -11,6 +11,8 @@ import { CHART_HEIGHT } from '../lib/config';
 export interface ChartRef {
   setData: (candles: Candle[]) => void;
   updateToIndex: (index: number) => void;
+  resetCrop: () => void;
+  startCrop: () => void;
 }
 
 interface ChartProps {
@@ -202,6 +204,9 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ selectMode = false, onSelectCa
 
     // 当处于裁剪模式或正在播放时，按 index 逐根揭示；否则显示全部
     const incremental = clipActive || state.status === 'playing';
+    if (incremental && clipActive) {
+      console.info('[Chart] incremental due to clipActive; index=%d status=%s', state.index, state.status);
+    }
     const sliceLen = incremental
       ? Math.min(state.index + 1, candlestickData.length)
       : candlestickData.length;
@@ -247,13 +252,72 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ selectMode = false, onSelectCa
     userAdjustedRef.current = false;
   }, [state.symbol, state.interval, state.range]);
 
+// 定位到所选索引：当非播放且未裁剪时，若当前索引不在可见范围内则自动平移
+useEffect(() => {
+  const chart = chartRef.current;
+  if (!chart) return;
+  if (state.status === 'playing' || clipActive) return; // 播放或裁剪中不干预
+
+  const ts = chart.timeScale();
+  const lr = ts.getVisibleLogicalRange() as any;
+  if (!lr || !isFinite(lr.from) || !isFinite(lr.to)) return;
+
+  const lastIndex = Math.min(state.index, Math.max(0, state.candles.length - 1));
+  const margin = 2; // 容差：只在索引明显不在视窗范围时才平移
+
+  // 如果当前索引已在可见范围内，则不操作
+  if (lastIndex >= lr.from + margin && lastIndex <= lr.to - margin) {
+    return;
+  }
+
+  // 以当前可见宽度为基准，将索引居中
+  const visibleWidth = Math.max(5, lr.to - lr.from);
+  const from = lastIndex - visibleWidth * 0.5;
+  const to = lastIndex + visibleWidth * 0.5;
+
+  (ts as any).applyOptions?.({ shiftVisibleRangeOnNewBar: false });
+  ts.setVisibleLogicalRange({ from, to });
+  console.info('[Chart] auto-pan to index=%d, newRange=[%f, %f]', lastIndex, from, to);
+}, [state.index, state.status, clipActive, state.candles.length]);
   // 暴露方法
   useImperativeHandle(ref, () => ({
-    setData: (candles: Candle[]) => {
-      // 数据通过上下文更新
+    // 保留签名以兼容，但数据应通过 ReplayContext 流入，这里不再使用
+    setData: (_newCandles: Candle[]) => {
+      console.warn('[Chart] setData() is deprecated; data flows from ReplayContext. Ignored.');
     },
-    updateToIndex: (index: number) => {
-      // 可选：滚动到索引
+    // 可选：根据索引调整可见范围
+    updateToIndex: (i: number) => {
+      if (!chartRef.current) return;
+      const ts = chartRef.current.timeScale();
+      const lr = ts.getVisibleLogicalRange() as any;
+      const target = Math.max(0, i);
+      const visibleWidth =
+        lr && isFinite(lr.from) && isFinite(lr.to)
+          ? Math.max(5, lr.to - lr.from)
+          : 100; // 无可见范围时给个默认宽度
+      // 将目标索引居中显示
+      const from = target - visibleWidth * 0.5;
+      const to = target + visibleWidth * 0.5;
+      (ts as any).applyOptions?.({ shiftVisibleRangeOnNewBar: false });
+      ts.setVisibleLogicalRange({ from, to });
+      console.info('[Chart] updateToIndex center -> index=%d range=[%f, %f]', target, from, to);
+    },
+    // 供“重置”时调用：退出裁剪模式并自动适配全局视图
+    resetCrop: () => {
+      console.info('[Chart] resetCrop() called: clearing clipActive and fitting content');
+      setClipActive(false);
+      hasAutoFittedRef.current = false;
+      userAdjustedRef.current = false;
+      if (chartRef.current) {
+        const ts = chartRef.current.timeScale();
+        (ts as any).applyOptions?.({ shiftVisibleRangeOnNewBar: false });
+        ts.fitContent();
+      }
+    },
+    // 进入裁剪模式：隐藏所选索引之后的K线，等待播放继续揭示
+    startCrop: () => {
+      console.info('[Chart] startCrop() called: enable clipping from current index');
+      setClipActive(true);
     },
   }));
 

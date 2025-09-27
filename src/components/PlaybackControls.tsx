@@ -11,6 +11,9 @@ interface PlaybackControlsProps {
   onChangeInterval?: (interval: typeof SUPPORTED_INTERVALS[number]) => void;
   onStartSelect?: () => void;
   selecting?: boolean;
+  onReset?: () => void;
+  onFocusIndex?: (index: number) => void;
+  onEnableCrop?: () => void;
 }
 
 /* ======================= Icons ======================= */
@@ -63,6 +66,13 @@ const IconPause = ({ className = 'h-5 w-5' }: { className?: string }) => (
   </svg>
 );
 
+const IconReset = ({ className = 'h-5 w-5' }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
+    <path d="M20 11A8.1 8.1 0 0 0 4.5 9M4 5v4h4" />
+    <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" />
+  </svg>
+);
+
 const btnBase =
   'h-8 px-2 grid place-items-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800/80 active:scale-95 transition';
 
@@ -98,8 +108,8 @@ const humanizeSpeedNote = (s: number) => {
 
 /* ======================= Component ======================= */
 
-const PlaybackControls = ({ onChangeInterval, onStartSelect, selecting }: PlaybackControlsProps) => {
-  const { state, setStatus, setIndex, setSpeed } = useReplay();
+const PlaybackControls = ({ onChangeInterval, onStartSelect, selecting, onReset, onFocusIndex, onEnableCrop }: PlaybackControlsProps) => {
+  const { state, setStatus, setIndex, setSpeed, reset } = useReplay();
 
   const [openStart, setOpenStart] = useState(false);
   const [openSpeed, setOpenSpeed] = useState(false);
@@ -163,14 +173,34 @@ const PlaybackControls = ({ onChangeInterval, onStartSelect, selecting }: Playba
       return;
     }
     const idx = findClosestIndexByUnixSec(state.candles, Math.floor(ms / 1000));
+    // 选择起点：暂停 -> 开启裁剪（隐藏后续K线）-> 设置索引 -> 定位 -> 关闭菜单
+    setStatus('paused');
+    onEnableCrop?.();
     setIndex(idx);
+    onFocusIndex?.(idx);
+    setOpenStart(false);
+    console.info('[PlaybackControls] Pick by date -> index', idx);
   };
 
-  const pickFirst = () => setIndex(0);
+  const pickFirst = () => {
+    // 选择第一个起点：暂停 -> 开启裁剪 -> 置 index=0 -> 定位 -> 关闭菜单
+    setStatus('paused');
+    onEnableCrop?.();
+    setIndex(0);
+    onFocusIndex?.(0);
+    setOpenStart(false);
+    console.info('[PlaybackControls] Pick first index -> 0');
+  };
   const pickRandom = () => {
     if (!hasData) return;
     const idx = Math.floor(Math.random() * state.candles.length);
+    // 随机选择：暂停 -> 开启裁剪 -> 设置索引 -> 定位 -> 关闭菜单
+    setStatus('paused');
+    onEnableCrop?.();
     setIndex(idx);
+    onFocusIndex?.(idx);
+    setOpenStart(false);
+    console.info('[PlaybackControls] Pick random index ->', idx);
   };
 
   // 周期切换
@@ -347,6 +377,12 @@ const PlaybackControls = ({ onChangeInterval, onStartSelect, selecting }: Playba
         </button>
         <button onClick={handleStepForward} title="下一个K线" className={btnBase} disabled={!hasData || atEnd} aria-label="Step Forward">
           <IconStepFwd />
+        </button>
+
+        <div className="mx-1 h-4 w-px bg-slate-800" />
+
+        <button onClick={onReset} title="退出回放" className={btnBase} disabled={!hasData} aria-label="Reset">
+          <IconReset />
         </button>
 
         <div className="ml-auto text-xs text-slate-400 tabular-nums">
