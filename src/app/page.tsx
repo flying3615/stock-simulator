@@ -11,6 +11,7 @@ import TradePanel from '../components/TradePanel';
 import TradeLog from '../components/TradeLog';
 import { SUPPORTED_INTERVALS, RANGE_LIMITS } from '../lib/config';
 
+
 export default function Home() {
   return (
     <ReplayProvider>
@@ -22,13 +23,14 @@ export default function Home() {
 }
 
 function StockSimulator() {
-  const { state, setStatus, setData, setInterval: setIntervalContext } = useReplay();
+  const { state, setStatus, setData, setIndex, setInterval: setIntervalContext } = useReplay();
   const [symbol, setSymbol] = useState('AAPL');
   const [interval, setInterval] = useState<'1d' | '5m' | '1h' | '1wk'>('1d');
   const [range, setRange] = useState<string>(RANGE_LIMITS['1d']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [logOpen, setLogOpen] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
 
   // Keyboard listener for space to toggle play/pause
   useEffect(() => {
@@ -109,50 +111,35 @@ function StockSimulator() {
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-7xl mx-auto">
-        {/* 顶部输入区 */}
-        <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div className="flex items-end gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1 text-slate-800">Symbol</label>
-                <input
-                  type="text"
-                  value={symbol}
-                  onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                  className="px-3 py-2 border rounded text-slate-400"
-                  placeholder="e.g. AAPL"
-                />
-              </div>
-              <button
-                onClick={handleLoad}
-                disabled={loading}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
-              >
-                {loading ? 'Loading...' : 'Load Data'}
-              </button>
-            </div>
-            <button
-              onClick={() => setLogOpen(true)}
-              className="px-3 py-2 bg-slate-700 text-white rounded hover:bg-slate-800"
-              title="Open Trade Log"
-            >
-              Trade Log
-            </button>
-          </div>
-          {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+
+        {/* 底部交易面板（原 Trade Log 位置） */}
+        <div className="mb-4">
+          <TradePanel
+            symbol={symbol}
+            setSymbol={setSymbol}
+            handleLoad={handleLoad}
+            loading={loading}
+            error={error}
+            onOpenLog={() => setLogOpen(true)}
+          />
         </div>
 
         {/* 主内容区：扩大图表区域并去掉右侧面板 */}
         <div className="space-y-4">
           <div className="bg-white p-4 rounded-lg shadow-sm h-[70vh]">
-            <Chart />
+            <Chart
+              selectMode={selectMode}
+              onSelectCandle={(idx) => {
+                setIndex(idx);
+                setSelectMode(false); // 选择完成后自动关闭监听
+              }}
+            />
           </div>
-          <PlaybackControls onChangeInterval={handleChangeInterval} />
-        </div>
- 
-        {/* 底部交易面板（原 Trade Log 位置） */}
-        <div className="mt-4">
-          <TradePanel />
+          <PlaybackControls
+            onChangeInterval={handleChangeInterval}
+            onStartSelect={() => setSelectMode((v) => !v)}
+            selecting={selectMode}
+          />
         </div>
  
         {/* 右侧弹出 Trade Log 抽屉 */}

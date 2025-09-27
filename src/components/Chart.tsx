@@ -16,9 +16,13 @@ export interface ChartRef {
 interface ChartProps {
   width?: number;
   height?: number;
+  // 是否进入“选择K线”模式（仅在 true 时监听点击）
+  selectMode?: boolean;
+  // 选择某根K线后的回调（返回所选索引）
+  onSelectCandle?: (index: number) => void;
 }
 
-const Chart = forwardRef<ChartRef, ChartProps>(({}, ref) => {
+const Chart = forwardRef<ChartRef, ChartProps>(({ selectMode = false, onSelectCandle }, ref) => {
   const { state, setIndex } = useReplay();
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -122,10 +126,16 @@ const Chart = forwardRef<ChartRef, ChartProps>(({}, ref) => {
     };
   }, []);
 
-  // 点击图表以进入“从此之后隐藏并逐根揭示”模式
+  // 条件监听：仅在 selectMode 为 true 时启用点击选择
   useEffect(() => {
     const chart = chartRef.current as any;
     if (!chart) return;
+
+    if (!selectMode) {
+      // 未处于选择模式，不监听
+      return;
+    }
+
     const handler = (param: any) => {
       if (!param || param.time == null) return;
       const clickedSec =
@@ -144,14 +154,21 @@ const Chart = forwardRef<ChartRef, ChartProps>(({}, ref) => {
           closestIndex = i;
         }
       }
-      setIndex(closestIndex);
-      setClipActive(true);
+
+      // 仅通过回调告知外部，外部可更新 index 并关闭选择模式
+      try {
+        onSelectCandle?.(closestIndex);
+      } finally {
+        // 内部开启裁剪以达到“从此开始逐根揭示”的视觉效果
+        setClipActive(true);
+      }
     };
+
     chart.subscribeClick(handler);
     return () => {
       chart.unsubscribeClick(handler);
     };
-  }, [state.candles, state.interval, setIndex]);
+  }, [selectMode, state.candles, state.interval, onSelectCandle]);
 
   // 更新数据
   useEffect(() => {

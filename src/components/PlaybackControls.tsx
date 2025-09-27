@@ -9,6 +9,8 @@ import { SEEK_SIZE, SUPPORTED_INTERVALS } from '../lib/config';
 
 interface PlaybackControlsProps {
   onChangeInterval?: (interval: typeof SUPPORTED_INTERVALS[number]) => void;
+  onStartSelect?: () => void;
+  selecting?: boolean;
 }
 
 /* ======================= Icons ======================= */
@@ -96,7 +98,7 @@ const humanizeSpeedNote = (s: number) => {
 
 /* ======================= Component ======================= */
 
-const PlaybackControls = ({ onChangeInterval }: PlaybackControlsProps) => {
+const PlaybackControls = ({ onChangeInterval, onStartSelect, selecting }: PlaybackControlsProps) => {
   const { state, setStatus, setIndex, setSpeed } = useReplay();
 
   const [openStart, setOpenStart] = useState(false);
@@ -203,7 +205,8 @@ const PlaybackControls = ({ onChangeInterval }: PlaybackControlsProps) => {
             title="回放起点"
             aria-haspopup="menu"
             aria-expanded={openStart}
-            className={btnBase}
+            className={`${btnBase} ${selecting ? 'text-blue-400' : ''}`}
+            aria-pressed={!!selecting}
             disabled={!hasData}
           >
             <IconCandle />
@@ -211,22 +214,20 @@ const PlaybackControls = ({ onChangeInterval }: PlaybackControlsProps) => {
           {openStart && (
             <div
               role="menu"
-              className="absolute z-20 mt-2 w-48 rounded-md border border-slate-800 bg-slate-900/98 shadow-lg ring-1 ring-black/5 overflow-hidden"
+              className="absolute z-20 bottom-full mb-2 w-48 rounded-md border border-slate-800 bg-slate-900/98 shadow-lg ring-1 ring-black/5 overflow-hidden"
             >
               <div className="px-3 py-2 text-xs text-slate-400">回放计时</div>
               <button
                 role="menuitem"
                 onClick={() => {
+                  onStartSelect?.();
                   setOpenStart(false);
-                  // 图表已支持点击定位并裁剪，提示用户点击图表即可
-                  setTimeout(() => {
-                    // 轻提示（可替换为更正式的 toast）
-                    console.info('提示：点击图表以选择起点K线');
-                  }, 0);
+                  setTimeout(() => console.info('提示：点击图表以选择起点K线'), 0);
                 }}
                 className="w-full text-left px-3 py-2 text-sm hover:bg-slate-800/70"
+                aria-pressed={!!selecting}
               >
-                选择K线
+                选择K线{selecting ? '（选择中）' : ''}
               </button>
               <button role="menuitem" onClick={pickByDate} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-800/70">
                 选择日期...
@@ -267,7 +268,7 @@ const PlaybackControls = ({ onChangeInterval }: PlaybackControlsProps) => {
           {openSpeed && (
             <div
               role="menu"
-              className="absolute z-20 mt-2 w-56 rounded-md border border-slate-800 bg-slate-900/98 shadow-lg ring-1 ring-black/5 overflow-hidden"
+              className="absolute z-20 bottom-full mb-2 w-56 rounded-md border border-slate-800 bg-slate-900/98 shadow-lg ring-1 ring-black/5 overflow-hidden"
             >
               <div className="px-3 py-2 text-xs text-slate-400">回放速度</div>
               {speedOptions.map(s => {
@@ -309,7 +310,7 @@ const PlaybackControls = ({ onChangeInterval }: PlaybackControlsProps) => {
             {openInterval && (
               <div
                 role="menu"
-                className="absolute z-20 mt-2 w-40 rounded-md border border-slate-800 bg-slate-900/98 shadow-lg ring-1 ring-black/5 overflow-hidden"
+                className="absolute z-20 bottom-full mb-2 w-40 rounded-md border border-slate-800 bg-slate-900/98 shadow-lg ring-1 ring-black/5 overflow-hidden"
               >
                 <div className="px-3 py-2 text-xs text-slate-400">更新周期</div>
                 {SUPPORTED_INTERVALS.map(intv => {
