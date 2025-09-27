@@ -67,17 +67,17 @@ function StockSimulator() {
         <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
           <div className="flex flex-wrap gap-4 items-end">
             <div>
-              <label className="block text-sm font-medium mb-1">Symbol</label>
+              <label className="block text-sm font-medium mb-1 text-slate-800">Symbol</label>
               <input
                 type="text"
                 value={symbol}
                 onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                className="px-3 py-2 border rounded"
+                className="px-3 py-2 border rounded text-slate-400"
                 placeholder="e.g. AAPL"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Interval</label>
+              <label className="block text-sm font-medium mb-1 text-slate-800">Interval</label>
               <select
                 value={interval}
                 onChange={(e) => {
@@ -85,7 +85,7 @@ function StockSimulator() {
                   setInterval(newInterval);
                   setRange(RANGE_LIMITS[newInterval]); // 自动调整 range
                 }}
-                className="px-3 py-2 border rounded"
+                className="px-3 py-2 border rounded text-slate-400"
               >
                 {SUPPORTED_INTERVALS.map((int) => (
                   <option key={int} value={int}>
@@ -95,11 +95,11 @@ function StockSimulator() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Range</label>
+              <label className="block text-sm font-medium mb-1 text-slate-800">Range</label>
               <select
                 value={range}
                 onChange={(e) => setRange(e.target.value)}
-                className="px-3 py-2 border rounded"
+                className="px-3 py-2 border rounded text-slate-400"
               >
                 <option value="5y">5 Years</option>
                 <option value="30d">30 Days</option>

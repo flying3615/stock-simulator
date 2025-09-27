@@ -2,7 +2,7 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #0f172a; /* darker for better contrast on white */
+  --foreground: #1e293b; /* slate-800 for strong contrast */
 }
 
 @theme inline {
@@ -26,5 +26,5 @@ body {
 }
 
 /* High-contrast overrides for readability on light background */
-.text-gray-600 { color: #334155 !important; } /* slate-700 */
-.text-gray-500 { color: #475569 !important; } /* slate-600 */
+.text-gray-600 { color: #1e293b !important; } /* slate-800 */
+.text-gray-500 { color: #1e293b !important; } /* slate-800 */

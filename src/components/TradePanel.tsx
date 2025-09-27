@@ -53,15 +53,15 @@ const TradePanel = () => {
 
   return (
     <div className="flex flex-col gap-4 p-4 bg-white border rounded-lg shadow-sm">
-      <h3 className="text-lg font-semibold">Trade Panel</h3>
+      <h3 className="text-lg font-semibold text-slate-800">Trade Panel</h3>
 
       {/* 当前价格 */}
-      <div className="text-sm">
+      <div className="text-sm text-slate-700">
         <span className="font-medium">Current Price:</span> ${currentPrice.toFixed(2)}
       </div>
 
       {/* 持仓信息 */}
-      <div className="grid grid-cols-2 gap-2 text-sm">
+      <div className="grid grid-cols-2 gap-2 text-sm text-slate-700">
         <div>
           <span className="font-medium">Position Qty:</span> {portfolio.positionQty}
         </div>
@@ -84,13 +84,13 @@ const TradePanel = () => {
 
       {/* 数量输入 */}
       <div className="flex items-center gap-2">
-        <label className="text-sm font-medium">Quantity:</label>
+        <label className="text-sm font-medium text-slate-800">Quantity:</label>
         <input
           type="number"
           value={qty}
           onChange={(e) => setQty(parseInt(e.target.value, 10) || 0)}
           min="1"
-          className="px-2 py-1 border rounded w-20"
+          className="px-2 py-1 border rounded w-20 text-slate-400"
         />
       </div>
 
@@ -129,7 +129,7 @@ const TradePanel = () => {
       </div>
 
       {/* 提示 */}
-      <div className="text-xs text-gray-500">
+      <div className="text-xs text-slate-700">
         Buy: 开多仓 | Sell: 平多仓 | Short: 开空仓 | Cover: 平空仓
       </div>
     </div>
