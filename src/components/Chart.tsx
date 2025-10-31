@@ -66,7 +66,7 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ selectMode = false, onSelectCa
         horzLines: { color: '#374151' }, // gray-700
       },
       crosshair: {
-        mode: 1, // Normal
+        mode: 0,
       },
       rightPriceScale: {
         borderColor: '#374151', // gray-700
