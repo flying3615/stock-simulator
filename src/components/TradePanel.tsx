@@ -3,9 +3,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useReplay } from '../lib/context/ReplayContext';
-import { usePortfolio } from '../lib/context/PortfolioContext';
-import { DEFAULT_QTY } from '../lib/config';
+import { useReplay } from '@/lib/context/ReplayContext';
+import { usePortfolio } from '@/lib/context/PortfolioContext';
+import { DEFAULT_QTY } from '@/lib/config';
 
 interface TradePanelProps {
   symbol: string;

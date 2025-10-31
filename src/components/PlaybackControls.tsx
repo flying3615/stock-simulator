@@ -4,8 +4,8 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useReplay } from '../lib/context/ReplayContext';
-import { SEEK_SIZE, SUPPORTED_INTERVALS, SUPPORTED_RANGES } from '../lib/config';
+import { useReplay } from '@/lib/context/ReplayContext';
+import { SEEK_SIZE, SUPPORTED_INTERVALS, SUPPORTED_RANGES } from '@/lib/config';
 
 interface PlaybackControlsProps {
   onChangeInterval?: (interval: typeof SUPPORTED_INTERVALS[number]) => void;
@@ -277,7 +277,6 @@ const PlaybackControls = ({ onChangeInterval, onChangeRange, currentRange, onSta
                   setTimeout(() => console.info('Tip: click the chart to select the starting candle'), 0);
                 }}
                 className="w-full text-left px-3 py-2 text-sm hover:bg-slate-800/70"
-                aria-pressed={!!selecting}
               >
                 Select Candle{selecting ? ' (Selecting)' : ''}
               </button>
