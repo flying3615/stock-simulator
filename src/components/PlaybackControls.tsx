@@ -18,9 +18,23 @@ interface PlaybackControlsProps {
   onFocusIndex?: (index: number) => void;
   onEnableCrop?: () => void;
   onFitContent?: () => void;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
 /* ======================= Icons ======================= */
+
+const IconMaximize = ({ className = 'w-5 h-5' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+  </svg>
+);
+
+const IconMinimize = ({ className = 'w-5 h-5' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+  </svg>
+);
 
 const IconCandle = ({ className = 'h-5 w-5' }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
@@ -122,7 +136,7 @@ const humanizeSpeedNote = (s: number) => {
 
 /* ======================= Component ======================= */
 
-const PlaybackControls = ({ onChangeInterval, onChangeRange, currentRange, onStartSelect, onSelectStart, selecting, onReset, onFocusIndex, onEnableCrop, onFitContent }: PlaybackControlsProps) => {
+const PlaybackControls = ({ onChangeInterval, onChangeRange, currentRange, onStartSelect, onSelectStart, selecting, onReset, onFocusIndex, onEnableCrop, onFitContent, isFullscreen, onToggleFullscreen }: PlaybackControlsProps) => {
   const { state, setStatus, setIndex, setSpeed, reset } = useReplay();
 
   const [openStart, setOpenStart] = useState(false);
@@ -436,6 +450,10 @@ const PlaybackControls = ({ onChangeInterval, onChangeRange, currentRange, onSta
         <div className="ml-auto text-xs text-slate-400 tabular-nums">
           {Math.min(state.index + 1, state.candles.length)} / {state.candles.length}
         </div>
+
+        <button onClick={onToggleFullscreen} title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'} className={btnBase} aria-label={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}>
+          {isFullscreen ? <IconMinimize /> : <IconMaximize />}
+        </button>
       </div>
     </div>
   );

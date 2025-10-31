@@ -43,7 +43,9 @@ function StockSimulator() {
   const [error, setError] = useState<string | null>(null);
   const [logOpen, setLogOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const chartRef = useRef<ChartRef>(null);
+  const chartWrapperRef = useRef<HTMLDivElement>(null);
 
   const handleReset = () => {
     reset();
@@ -52,12 +54,46 @@ function StockSimulator() {
     }
   };
 
+  const toggleFullscreen = () => {
+    if (!chartWrapperRef.current) return;
+    if (!document.fullscreenElement) {
+      chartWrapperRef.current.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isFs = !!document.fullscreenElement;
+      setIsFullscreen(isFs);
+      requestAnimationFrame(() => {
+        if (chartRef.current && chartWrapperRef.current) {
+          chartRef.current.resize(
+            chartWrapperRef.current.clientWidth,
+            chartWrapperRef.current.clientHeight
+          );
+          if (!isFs) {
+            // After exiting fullscreen, fit the content to reset the view
+            chartRef.current.fitContent();
+          }
+        }
+      });
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Space: toggle play/pause
+      // Allow ESC to exit fullscreen, but don't interfere with other keys if not in fullscreen
+      if (event.key === 'Escape' && isFullscreen) {
+        // Fullscreen exit is handled by the browser
+        return;
+      }
       if (event.key === ' ') {
-        event.preventDefault(); // Prevent page scroll
+        event.preventDefault();
         if (state.status === 'playing') {
           setStatus('paused');
         } else {
@@ -100,7 +136,7 @@ function StockSimulator() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [state.status, state.index, state.candles.length, setStatus, setIndex]);
+  }, [state.status, state.index, state.candles.length, setStatus, setIndex, isFullscreen]);
 
 
   const handleChangeInterval = async (newInterval: typeof SUPPORTED_INTERVALS[number]) => {
@@ -171,7 +207,6 @@ function StockSimulator() {
 
       const data = await response.json() as any;
 
-      // 设置数据到上下文（使用与后端一致的有效 range）
       setData(data.candles, symbol, interval, effectiveRange);
 
     } catch (err: any) {
@@ -192,8 +227,7 @@ function StockSimulator() {
         const endDate = new Date(firstCandleTime);
         const dayInMillis = 24 * 60 * 60 * 1000;
         
-        // Estimate start date by fetching more days to account for non-trading days (e.g., 1.5x)
-        const estimatedDaysToFetch = Math.ceil(candlesToFetch * 1.5); // Fetch 50% more
+        const estimatedDaysToFetch = Math.ceil(candlesToFetch * 1.5);
         const startDate = new Date(endDate.getTime() - estimatedDaysToFetch * dayInMillis);
 
         setLoading(true);
@@ -210,11 +244,9 @@ function StockSimulator() {
             let newCandles = data.candles;
 
             if (newCandles.length > 0) {
-                // De-duplicate and get the exact number of candles needed
                 const firstCurrentCandleTime = toUnixSeconds(currentCandles[0].time);
                 newCandles = newCandles.filter((c: any) => toUnixSeconds(c.time) < firstCurrentCandleTime);
                 
-                // Take the last `candlesToFetch` candles from the new data
                 const prependedCandles = newCandles.slice(-candlesToFetch);
 
                 const combinedCandles = [...prependedCandles, ...currentCandles];
@@ -224,14 +256,12 @@ function StockSimulator() {
                 chartRef.current?.startCrop();
                 chartRef.current?.updateToIndex(newIndex);
             } else {
-                // No more historical data, just use the selected index
                 setIndex(selectedIndex);
                 chartRef.current?.startCrop();
                 chartRef.current?.updateToIndex(selectedIndex);
             }
         } catch (err: any) {
             setError(err.message);
-            // Fallback to original behavior on error
             setIndex(selectedIndex);
             chartRef.current?.startCrop();
             chartRef.current?.updateToIndex(selectedIndex);
@@ -250,7 +280,6 @@ function StockSimulator() {
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-7xl mx-auto">
 
-        {/* 底部交易面板（原 Trade Log 位置） */}
         <div className="mb-4">
           <TradePanel
             symbol={symbol}
@@ -262,9 +291,8 @@ function StockSimulator() {
           />
         </div>
 
-        {/* 主内容区：扩大图表区域并去掉右侧面板 */}
         <div className="space-y-4">
-          <div className="bg-white p-4 rounded-lg shadow-sm h-[70vh]">
+          <div ref={chartWrapperRef} className={`relative bg-gray-800 p-4 rounded-lg shadow-sm h-[70vh] ${isFullscreen ? 'fullscreen-chart-wrapper' : ''}`}>
             <Chart
               ref={chartRef}
               selectMode={selectMode}
@@ -282,10 +310,11 @@ function StockSimulator() {
             onFocusIndex={(i) => chartRef.current?.updateToIndex(i)}
             onEnableCrop={() => chartRef.current?.startCrop()}
             onFitContent={() => chartRef.current?.fitContent()}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={toggleFullscreen}
           />
         </div>
  
-        {/* 右侧弹出 Trade Log 抽屉 */}
         {logOpen && (
           <>
             <div

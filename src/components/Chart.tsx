@@ -58,21 +58,21 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ selectMode = false, onSelectCa
       width,
       height,
       layout: {
-        background: { color: '#ffffff' },
-        textColor: '#333',
+        background: { color: '#1F2937' }, // gray-800
+        textColor: '#D1D5DB', // gray-300
       },
       grid: {
-        vertLines: { color: '#e1e1e1' },
-        horzLines: { color: '#e1e1e1' },
+        vertLines: { color: '#374151' }, // gray-700
+        horzLines: { color: '#374151' }, // gray-700
       },
       crosshair: {
         mode: 1, // Normal
       },
       rightPriceScale: {
-        borderColor: '#cccccc',
+        borderColor: '#374151', // gray-700
       },
       timeScale: {
-        borderColor: '#cccccc',
+        borderColor: '#374151', // gray-700
         timeVisible: true,
         secondsVisible: false,
         rightOffset: 10,
@@ -273,24 +273,27 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ selectMode = false, onSelectCa
     fitContent: () => {
       chartRef.current?.timeScale().fitContent();
     },
+    resize: (width: number, height: number) => {
+      chartRef.current?.applyOptions({ width, height });
+    },
   }));
 
   return (
     <div className="relative w-full h-full">
       {legendData && (
-        <div className="absolute top-3 left-3 z-10 p-2 bg-white/80 backdrop-blur-sm rounded border border-slate-200 text-xs text-slate-800 pointer-events-none">
-          <div className="font-bold text-sm mb-1">{state.symbol}</div>
+        <div className="absolute top-3 left-3 z-10 p-2 bg-gray-800/80 backdrop-blur-sm rounded border border-gray-700 text-xs text-gray-300 pointer-events-none">
+          <div className="font-bold text-sm mb-1 text-white">{state.symbol}</div>
           {legendData.ohlc && (
             <div>
-              <span className="text-slate-500">O:</span> {legendData.ohlc.open.toFixed(2)}
-              <span className="text-slate-500 ml-2">H:</span> {legendData.ohlc.high.toFixed(2)}
-              <span className="text-slate-500 ml-2">L:</span> {legendData.ohlc.low.toFixed(2)}
-              <span className="text-slate-500 ml-2">C:</span> {legendData.ohlc.close.toFixed(2)}
+              <span className="text-gray-400">O:</span> {legendData.ohlc.open.toFixed(2)}
+              <span className="text-gray-400 ml-2">H:</span> {legendData.ohlc.high.toFixed(2)}
+              <span className="text-gray-400 ml-2">L:</span> {legendData.ohlc.low.toFixed(2)}
+              <span className="text-gray-400 ml-2">C:</span> {legendData.ohlc.close.toFixed(2)}
             </div>
           )}
           {legendData.volume && (
             <div>
-              <span className="text-slate-500">Vol:</span> {legendData.volume.value.toLocaleString()}
+              <span className="text-gray-400">Vol:</span> {legendData.volume.value.toLocaleString()}
             </div>
           )}
         </div>
