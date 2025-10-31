@@ -28,3 +28,14 @@ body {
 /* High-contrast overrides for readability on light background */
 .text-gray-600 { color: #1e293b !important; } /* slate-800 */
 .text-gray-500 { color: #1e293b !important; } /* slate-800 */
+
+.fullscreen-chart-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 50; /* Ensure it's on top */
+    padding: 0 !important; /* Override existing padding */
+}
+

@@ -3,10 +3,10 @@
 'use client';
 
 import { useEffect, useRef, useImperativeHandle, forwardRef, useState } from 'react';
-import { createChart, IChartApi, ISeriesApi, CandlestickData, HistogramData } from 'lightweight-charts';
-import { useReplay } from '../lib/context/ReplayContext';
-import type { Candle } from '../lib/types';
-import { CHART_HEIGHT } from '../lib/config';
+import { createChart, IChartApi, ISeriesApi, CandlestickData, HistogramData, UTCTimestamp } from 'lightweight-charts';
+import { useReplay } from '@/lib/context/ReplayContext';
+import type { Candle } from '@/lib/types';
+
 
 export interface ChartRef {
   setData: (candles: Candle[]) => void;
@@ -32,29 +32,21 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ selectMode = false, onSelectCa
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
   const [clipActive, setClipActive] = useState(false);
-  // 视图状态：记录是否已自动适配、用户是否主动缩放/平移
   const hasAutoFittedRef = useRef(false);
   const userAdjustedRef = useRef(false);
 
-  // 时间转换工具：统一为 v4 可接受的 time 类型
+  // State for custom legend
+  const [legendData, setLegendData] = useState<any>(null);
+
   const toUnixSeconds = (input: any): number => {
     if (typeof input === 'number') {
-      return input > 1e12 ? Math.floor(input / 1000) : input; // 毫秒->秒
+      return input > 1e12 ? Math.floor(input / 1000) : input;
     }
     const ms = Date.parse(input);
     return Math.floor(ms / 1000);
   };
 
-  const toBusinessDay = (input: any): string => {
-    const ms =
-      typeof input === 'number'
-        ? (input > 1e12 ? input : input * 1000)
-        : Date.parse(input);
-    // yyyy-mm-dd（UTC）
-    return new Date(ms).toISOString().slice(0, 10);
-  };
-
-  // 初始化图表
+  // Initialize chart
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
@@ -66,31 +58,29 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ selectMode = false, onSelectCa
       width,
       height,
       layout: {
-        background: { color: '#ffffff' },
-        textColor: '#333',
+        background: { color: '#1F2937' }, // gray-800
+        textColor: '#D1D5DB', // gray-300
       },
       grid: {
-        vertLines: { color: '#e1e1e1' },
-        horzLines: { color: '#e1e1e1' },
+        vertLines: { color: '#374151' }, // gray-700
+        horzLines: { color: '#374151' }, // gray-700
       },
       crosshair: {
-        mode: 1, // Normal
+        mode: 0,
       },
       rightPriceScale: {
-        borderColor: '#cccccc',
+        borderColor: '#374151', // gray-700
       },
       timeScale: {
-        borderColor: '#cccccc',
+        borderColor: '#374151', // gray-700
         timeVisible: true,
         secondsVisible: false,
-        // 让右侧默认留白，且不要在新增bar时自动把最后一根顶到最右
         rightOffset: 10,
         shiftVisibleRangeOnNewBar: false,
       },
     });
 
-    // 仅使用 v4 API（已将 lightweight-charts 固定到 v4）
-    const candlestickSeries = (chart as any).addCandlestickSeries({
+    const candlestickSeries = chart.addCandlestickSeries({
       upColor: '#26a69a',
       downColor: '#ef5350',
       borderVisible: false,
@@ -98,10 +88,10 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ selectMode = false, onSelectCa
       wickDownColor: '#ef5350',
     });
 
-    const volumeSeries = (chart as any).addHistogramSeries({
+    const volumeSeries = chart.addHistogramSeries({
       color: '#26a69a',
       priceFormat: { type: 'volume' },
-      priceScaleId: '', // 独立价格轴
+      priceScaleId: '',
     });
     volumeSeries.priceScale().applyOptions({
       scaleMargins: {
@@ -111,46 +101,45 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ selectMode = false, onSelectCa
     });
 
     chartRef.current = chart;
-    candlestickSeriesRef.current = candlestickSeries as any;
-    volumeSeriesRef.current = volumeSeries as any;
+    candlestickSeriesRef.current = candlestickSeries;
+    volumeSeriesRef.current = volumeSeries;
 
-    // 监听可见范围变化，用于检测用户缩放/平移
+    chart.subscribeCrosshairMove(param => {
+      if (param.time && candlestickSeriesRef.current && volumeSeriesRef.current && param.seriesData.size > 0) {
+        const candlestickData = param.seriesData.get(candlestickSeriesRef.current);
+        const volumeData = param.seriesData.get(volumeSeriesRef.current);
+        setLegendData({ ohlc: candlestickData, volume: volumeData });
+      } else {
+        setLegendData(null);
+      }
+    });
+
     const ts = chart.timeScale();
     const onRangeChange = () => {
-      if (!hasAutoFittedRef.current) return; // 初始化阶段的变更不计入用户操作
+      if (!hasAutoFittedRef.current) return;
       userAdjustedRef.current = true;
     };
     ts.subscribeVisibleTimeRangeChange(onRangeChange);
 
-    // 清理
     return () => {
       ts.unsubscribeVisibleTimeRangeChange(onRangeChange);
       chart.remove();
     };
   }, []);
 
-  // 条件监听：仅在 selectMode 为 true 时启用点击选择
+  // Conditional listener for selectMode
   useEffect(() => {
-    const chart = chartRef.current as any;
-    if (!chart) return;
-
-    if (!selectMode) {
-      // 未处于选择模式，不监听
-      return;
-    }
+    const chart = chartRef.current;
+    if (!chart || !selectMode) return;
 
     const handler = (param: any) => {
       if (!param || param.time == null) return;
-      const clickedSec =
-        typeof param.time === 'string'
-          ? Math.floor(Date.parse(param.time) / 1000)
-          : Number(param.time);
+      const clickedSec = typeof param.time === 'string' ? Math.floor(Date.parse(param.time) / 1000) : Number(param.time);
 
-      // 找到最接近的索引
       let closestIndex = 0;
       let minDiff = Infinity;
       for (let i = 0; i < state.candles.length; i++) {
-        const sec = toUnixSeconds(state.candles[i].time as any);
+        const sec = toUnixSeconds(state.candles[i].time);
         const diff = Math.abs(sec - clickedSec);
         if (diff < minDiff) {
           minDiff = diff;
@@ -158,177 +147,160 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ selectMode = false, onSelectCa
         }
       }
 
-      // 仅通过回调告知外部，外部可更新 index 并关闭选择模式
       try {
         onSelectCandle?.(closestIndex);
       } finally {
-        // 内部开启裁剪以达到“从此开始逐根揭示”的视觉效果
         setClipActive(true);
       }
     };
 
     chart.subscribeClick(handler);
-    return () => {
-      chart.unsubscribeClick(handler);
-    };
-  }, [selectMode, state.candles, state.interval, onSelectCandle]);
+    return () => chart.unsubscribeClick(handler);
+  }, [selectMode, state.candles, onSelectCandle]);
 
-  // 更新数据
+  // Update data
   useEffect(() => {
-    if (!candlestickSeriesRef.current || !volumeSeriesRef.current || state.candles.length === 0) return;
-
-    const candlestickData: CandlestickData[] = state.candles.map(candle => {
-      const timeValue =
-        state.interval === '1d'
-          ? (toBusinessDay(candle.time) as any) // 日线用 yyyy-mm-dd
-          : (toUnixSeconds(candle.time) as any); // 分钟线用秒
-      return {
-        time: timeValue,
-        open: candle.open,
-        high: candle.high,
-        low: candle.low,
-        close: candle.close,
-      };
-    });
-
-    const volumeData: HistogramData[] = state.candles.map(candle => {
-      const timeValue =
-        state.interval === '1d'
-          ? (toBusinessDay(candle.time) as any)
-          : (toUnixSeconds(candle.time) as any);
-      return {
-        time: timeValue,
-        value: candle.volume,
-        color: candle.close >= candle.open ? '#26a69a' : '#ef5350',
-      };
-    });
-
-    // 当处于裁剪模式或正在播放时，按 index 逐根揭示；否则显示全部
-    const incremental = clipActive || state.status === 'playing';
-    if (incremental && clipActive) {
-      console.info('[Chart] incremental due to clipActive; index=%d status=%s', state.index, state.status);
+    if (!candlestickSeriesRef.current || !volumeSeriesRef.current || state.candles.length === 0) {
+        // Clear series data if no candles
+        candlestickSeriesRef.current?.setData([]);
+        volumeSeriesRef.current?.setData([]);
+        return;
     }
-    const sliceLen = incremental
-      ? Math.min(state.index + 1, candlestickData.length)
-      : candlestickData.length;
+
+    const candlestickData: CandlestickData<UTCTimestamp>[] = state.candles.map(candle => ({
+      time: toUnixSeconds(candle.time) as UTCTimestamp,
+      open: candle.open,
+      high: candle.high,
+      low: candle.low,
+      close: candle.close,
+    }));
+
+    const volumeData: HistogramData<UTCTimestamp>[] = state.candles.map(candle => ({
+      time: toUnixSeconds(candle.time) as UTCTimestamp,
+      value: candle.volume,
+      color: candle.close >= candle.open ? '#26a69a' : '#ef5350',
+    }));
+
+    const incremental = clipActive || state.status === 'playing';
+    const sliceLen = incremental ? Math.min(state.index + 1, candlestickData.length) : candlestickData.length;
 
     candlestickSeriesRef.current.setData(candlestickData.slice(0, sliceLen));
     volumeSeriesRef.current.setData(volumeData.slice(0, sliceLen));
 
-    // 播放时将最后一根K线固定在可见区域的 3/4 处：
-    // 使用 setVisibleLogicalRange 直接设定范围，避免被 scrollTo... 顶到最右
-    if (chartRef.current && state.status === 'playing') {
+    if (chartRef.current && state.status === 'playing' && !userAdjustedRef.current) {
       const ts = chartRef.current.timeScale();
       const lr = ts.getVisibleLogicalRange();
-      const lastIndex = sliceLen - 1; // 当前已揭示的最后一根
-      // 当前可见宽度（逻辑索引单位）
-      const visibleWidth =
-        lr && isFinite((lr as any).from) && isFinite((lr as any).to)
-          ? Math.max(5, (lr as any).to - (lr as any).from)
-          : 100;
-      // 让 lastIndex 处在右侧的 85%（from 占 85%，to 占 15%）
+      const lastIndex = sliceLen - 1;
+      const visibleWidth = lr ? Math.max(5, lr.to - lr.from) : 100;
       const from = lastIndex - visibleWidth * 0.85;
       const to = lastIndex + visibleWidth * 0.15;
-      // 禁止“新bar时自动顶到最右”
-      (ts as any).applyOptions?.({ shiftVisibleRangeOnNewBar: false });
       ts.setVisibleLogicalRange({ from, to });
     }
 
-    // 首次或加载新数据时自动适配；用户已缩放/平移、播放中或裁剪中不打断
-    if (
-      chartRef.current &&
-      !hasAutoFittedRef.current &&
-      !clipActive &&
-      state.status !== 'playing'
-    ) {
+    if (chartRef.current && !hasAutoFittedRef.current && !clipActive && state.status !== 'playing') {
       chartRef.current.timeScale().fitContent();
       hasAutoFittedRef.current = true;
     }
-  }, [state.candles, state.index, clipActive, state.interval]);
+  }, [state.candles, state.index, state.status, clipActive]);
 
-  // 数据切换时退出裁剪模式，并重置视图自动适配状态
+  // Reset clip and fit status on data change
   useEffect(() => {
     setClipActive(false);
     hasAutoFittedRef.current = false;
     userAdjustedRef.current = false;
   }, [state.symbol, state.interval, state.range]);
 
-// 定位到所选索引：当非播放且未裁剪时，若当前索引不在可见范围内则自动平移
-useEffect(() => {
-  const chart = chartRef.current;
-  if (!chart) return;
-  if (state.status === 'playing' || clipActive) return; // 播放或裁剪中不干预
+  // Auto-pan to selected index
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || state.status === 'playing' || clipActive) return;
 
-  const ts = chart.timeScale();
-  const lr = ts.getVisibleLogicalRange() as any;
-  if (!lr || !isFinite(lr.from) || !isFinite(lr.to)) return;
+    const ts = chart.timeScale();
+    const lr = ts.getVisibleLogicalRange();
+    if (!lr) return;
 
-  const lastIndex = Math.min(state.index, Math.max(0, state.candles.length - 1));
-  const margin = 2; // 容差：只在索引明显不在视窗范围时才平移
+    const lastIndex = Math.min(state.index, Math.max(0, state.candles.length - 1));
+    const margin = 2;
 
-  // 如果当前索引已在可见范围内，则不操作
-  if (lastIndex >= lr.from + margin && lastIndex <= lr.to - margin) {
-    return;
-  }
+    if (lastIndex >= lr.from + margin && lastIndex <= lr.to - margin) {
+      return;
+    }
 
-  // 以当前可见宽度为基准，将索引居中
-  const visibleWidth = Math.max(5, lr.to - lr.from);
-  const from = lastIndex - visibleWidth * 0.5;
-  const to = lastIndex + visibleWidth * 0.5;
+    const visibleWidth = Math.max(5, lr.to - lr.from);
+    const from = lastIndex - visibleWidth * 0.5;
+    const to = lastIndex + visibleWidth * 0.5;
+    ts.setVisibleLogicalRange({ from, to });
+  }, [state.index, state.status, clipActive, state.candles.length]);
 
-  (ts as any).applyOptions?.({ shiftVisibleRangeOnNewBar: false });
-  ts.setVisibleLogicalRange({ from, to });
-  console.info('[Chart] auto-pan to index=%d, newRange=[%f, %f]', lastIndex, from, to);
-}, [state.index, state.status, clipActive, state.candles.length]);
-  // 暴露方法
-  useImperativeHandle(ref, () => ({
-    // 保留签名以兼容，但数据应通过 ReplayContext 流入，这里不再使用
-    setData: (_newCandles: Candle[]) => {
-      console.warn('[Chart] setData() is deprecated; data flows from ReplayContext. Ignored.');
-    },
-    // 可选：根据索引调整可见范围
-    updateToIndex: (i: number) => {
-      if (!chartRef.current) return;
-      const ts = chartRef.current.timeScale();
-      const lr = ts.getVisibleLogicalRange() as any;
-      const target = Math.max(0, i);
-      const visibleWidth =
-        lr && isFinite(lr.from) && isFinite(lr.to)
-          ? Math.max(5, lr.to - lr.from)
-          : 100; // 无可见范围时给个默认宽度
-      // 将目标索引居中显示
-      const from = target - visibleWidth * 0.5;
-      const to = target + visibleWidth * 0.5;
-      (ts as any).applyOptions?.({ shiftVisibleRangeOnNewBar: false });
-      ts.setVisibleLogicalRange({ from, to });
-      console.info('[Chart] updateToIndex center -> index=%d range=[%f, %f]', target, from, to);
-    },
-    // 供“重置”时调用：退出裁剪模式并自动适配全局视图
-    resetCrop: () => {
-      console.info('[Chart] resetCrop() called: clearing clipActive and fitting content');
-      setClipActive(false);
-      hasAutoFittedRef.current = false;
+  // Handle playback start
+  useEffect(() => {
+    if (state.status === 'playing') {
       userAdjustedRef.current = false;
       if (chartRef.current) {
         const ts = chartRef.current.timeScale();
-        (ts as any).applyOptions?.({ shiftVisibleRangeOnNewBar: false });
-        ts.fitContent();
+        const logicalRange = ts.getVisibleLogicalRange();
+        if (logicalRange) {
+          const lastIndex = Math.min(state.index, state.candles.length - 1);
+          const visibleWidth = logicalRange.to - logicalRange.from;
+          const targetFrom = lastIndex - visibleWidth * 0.85;
+          ts.setVisibleLogicalRange({ from: targetFrom, to: lastIndex + visibleWidth * 0.15 });
+        }
       }
+    }
+  }, [state.candles.length, state.index, state.status]);
+
+  useImperativeHandle(ref, () => ({
+    setData: () => console.warn('setData is deprecated'),
+    updateToIndex: (i: number) => {
+      if (!chartRef.current) return;
+      const ts = chartRef.current.timeScale();
+      const lr = ts.getVisibleLogicalRange();
+      const target = Math.max(0, i);
+      const visibleWidth = lr ? Math.max(5, lr.to - lr.from) : 100;
+      const from = target - visibleWidth * 0.5;
+      const to = target + visibleWidth * 0.5;
+      ts.setVisibleLogicalRange({ from, to });
     },
-    // 进入裁剪模式：隐藏所选索引之后的K线，等待播放继续揭示
+    resetCrop: () => {
+      setClipActive(false);
+      hasAutoFittedRef.current = false;
+      userAdjustedRef.current = false;
+      chartRef.current?.timeScale().fitContent();
+    },
     startCrop: () => {
-      console.info('[Chart] startCrop() called: enable clipping from current index');
       setClipActive(true);
     },
-    // 自动适配K线大小
     fitContent: () => {
-      if (chartRef.current) {
-        chartRef.current.timeScale().fitContent();
-      }
+      chartRef.current?.timeScale().fitContent();
+    },
+    resize: (width: number, height: number) => {
+      chartRef.current?.applyOptions({ width, height });
     },
   }));
 
-  return <div ref={chartContainerRef} className="w-full h-full" />;
+  return (
+    <div className="relative w-full h-full">
+      {legendData && (
+        <div className="absolute top-3 left-3 z-10 p-2 bg-gray-800/80 backdrop-blur-sm rounded border border-gray-700 text-xs text-gray-300 pointer-events-none">
+          <div className="font-bold text-sm mb-1 text-white">{state.symbol}</div>
+          {legendData.ohlc && (
+            <div>
+              <span className="text-gray-400">O:</span> {legendData.ohlc.open.toFixed(2)}
+              <span className="text-gray-400 ml-2">H:</span> {legendData.ohlc.high.toFixed(2)}
+              <span className="text-gray-400 ml-2">L:</span> {legendData.ohlc.low.toFixed(2)}
+              <span className="text-gray-400 ml-2">C:</span> {legendData.ohlc.close.toFixed(2)}
+            </div>
+          )}
+          {legendData.volume && (
+            <div>
+              <span className="text-gray-400">Vol:</span> {legendData.volume.value.toLocaleString()}
+            </div>
+          )}
+        </div>
+      )}
+      <div ref={chartContainerRef} className="w-full h-full" />
+    </div>
+  );
 });
 
 Chart.displayName = 'Chart';

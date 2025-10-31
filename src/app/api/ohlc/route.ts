@@ -1,8 +1,8 @@
 // API 路由：获取 OHLC 数据 v0.2
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getOHLC } from '../../../lib/data/yahoo';
-import { CACHE_MAX_AGE } from '../../../lib/config';
+import { getOHLC } from '@/lib/data/yahoo';
+import { CACHE_MAX_AGE } from '@/lib/config';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,18 +12,27 @@ export async function GET(request: NextRequest) {
     const symbol = searchParams.get('symbol');
     const interval = searchParams.get('interval') as '1d' | '5m' | '1h' | '1wk';
     const range = searchParams.get('range');
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
     const tz = searchParams.get('tz') || undefined;
 
     // 基础校验
-    if (!symbol || !interval || !range) {
+    if (!symbol || !interval || (!range && (!startDate || !endDate))) {
       return NextResponse.json(
-        { error: { code: 'MISSING_PARAMS', message: 'symbol, interval, range are required' } },
+        { error: { code: 'MISSING_PARAMS', message: 'symbol, interval, and (range or startDate/endDate) are required' } },
         { status: 400 }
       );
     }
 
     // 调用数据封装
-    const result = await getOHLC(symbol, interval, range, tz);
+    const result = await getOHLC({
+      symbol,
+      interval,
+      range: range || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+      tz,
+    });
 
     if (result.error) {
       return NextResponse.json(
