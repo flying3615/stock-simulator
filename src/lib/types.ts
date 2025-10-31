@@ -79,7 +79,9 @@ export interface ErrorShape {
 export interface OHLCRequest {
   symbol: string;
   interval: '1d' | '5m' | '1h' | '1wk';
-  range: string; // 如 '5y', '30d'
+  range?: string; // 如 '5y', '30d'
+  startDate?: string; // YYYY-MM-DD
+  endDate?: string; // YYYY-MM-DD
   tz?: string; // 时区（如 'America/New_York'）
 }
 

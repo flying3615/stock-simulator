@@ -12,6 +12,7 @@ interface PlaybackControlsProps {
   onChangeRange?: (range: string) => void;
   currentRange?: string;
   onStartSelect?: () => void;
+  onSelectStart?: (index: number) => void;
   selecting?: boolean;
   onReset?: () => void;
   onFocusIndex?: (index: number) => void;
@@ -121,7 +122,7 @@ const humanizeSpeedNote = (s: number) => {
 
 /* ======================= Component ======================= */
 
-const PlaybackControls = ({ onChangeInterval, onChangeRange, currentRange, onStartSelect, selecting, onReset, onFocusIndex, onEnableCrop, onFitContent }: PlaybackControlsProps) => {
+const PlaybackControls = ({ onChangeInterval, onChangeRange, currentRange, onStartSelect, onSelectStart, selecting, onReset, onFocusIndex, onEnableCrop, onFitContent }: PlaybackControlsProps) => {
   const { state, setStatus, setIndex, setSpeed, reset } = useReplay();
 
   const [openStart, setOpenStart] = useState(false);
@@ -189,34 +190,19 @@ const PlaybackControls = ({ onChangeInterval, onChangeRange, currentRange, onSta
       return;
     }
     const idx = findClosestIndexByUnixSec(state.candles, Math.floor(ms / 1000));
-    // 选择起点：暂停 -> 开启裁剪（隐藏后续K线）-> 设置索引 -> 定位 -> 关闭菜单
-    setStatus('paused');
-    onEnableCrop?.();
-    setIndex(idx);
-    onFocusIndex?.(idx);
+    onSelectStart?.(idx);
     setOpenStart(false);
-    console.info('[PlaybackControls] Pick by date -> index', idx);
   };
 
   const pickFirst = () => {
-    // 选择第一个起点：暂停 -> 开启裁剪 -> 置 index=0 -> 定位 -> 关闭菜单
-    setStatus('paused');
-    onEnableCrop?.();
-    setIndex(0);
-    onFocusIndex?.(0);
+    onSelectStart?.(0);
     setOpenStart(false);
-    console.info('[PlaybackControls] Pick first index -> 0');
   };
   const pickRandom = () => {
     if (!hasData) return;
     const idx = Math.floor(Math.random() * state.candles.length);
-    // 随机选择：暂停 -> 开启裁剪 -> 设置索引 -> 定位 -> 关闭菜单
-    setStatus('paused');
-    onEnableCrop?.();
-    setIndex(idx);
-    onFocusIndex?.(idx);
+    onSelectStart?.(idx);
     setOpenStart(false);
-    console.info('[PlaybackControls] Pick random index ->', idx);
   };
 
   // 周期切换

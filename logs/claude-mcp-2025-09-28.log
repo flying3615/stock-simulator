@@ -1,0 +1,2 @@
+[INFO] 2025-09-28T08:31:43.202Z: Logger initialized. Console output redirected to log file: /Users/yufei/Documents/git/stock-simulator/logs/claude-mcp-2025-09-28.log
+[WARN] 2025-09-28T08:31:43.202Z: ALPHA_VANTAGE_API_KEY 未配置，将无法使用相关工具

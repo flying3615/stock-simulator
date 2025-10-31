@@ -3,13 +3,13 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ReplayProvider, useReplay } from '../lib/context/ReplayContext';
-import { PortfolioProvider } from '../lib/context/PortfolioContext';
+import { ReplayProvider, useReplay } from '@/lib/context/ReplayContext';
+import { PortfolioProvider } from '@/lib/context/PortfolioContext';
 import Chart, { ChartRef } from '../components/Chart';
 import PlaybackControls from '../components/PlaybackControls';
 import TradePanel from '../components/TradePanel';
 import TradeLog from '../components/TradeLog';
-import { SUPPORTED_INTERVALS, RANGE_LIMITS, SEEK_SIZE } from '../lib/config';
+import { SUPPORTED_INTERVALS, RANGE_LIMITS, SEEK_SIZE } from '@/lib/config';
 
 
 export default function Home() {
@@ -21,6 +21,18 @@ export default function Home() {
     </ReplayProvider>
   );
 }
+
+const toUnixSeconds = (input: number | string): number => {
+  if (typeof input === 'number') return input > 1e12 ? Math.floor(input / 1000) : input;
+  return Math.floor(Date.parse(input) / 1000);
+};
+
+const formatDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 function StockSimulator() {
   const { state, setStatus, setData, setIndex, setInterval: setIntervalContext, reset } = useReplay();
@@ -169,6 +181,71 @@ function StockSimulator() {
     }
   };
 
+  const handleSelectStart = async (selectedIndex: number) => {
+    setStatus('paused');
+    const MIN_HISTORY = 100;
+    const currentCandles = state.candles;
+
+    if (selectedIndex < MIN_HISTORY && currentCandles.length > 0) {
+        const candlesToFetch = MIN_HISTORY - selectedIndex;
+        const firstCandleTime = toUnixSeconds(currentCandles[0].time) * 1000;
+        const endDate = new Date(firstCandleTime);
+        const dayInMillis = 24 * 60 * 60 * 1000;
+        
+        // Estimate start date by fetching more days to account for non-trading days (e.g., 1.5x)
+        const estimatedDaysToFetch = Math.ceil(candlesToFetch * 1.5); // Fetch 50% more
+        const startDate = new Date(endDate.getTime() - estimatedDaysToFetch * dayInMillis);
+
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await fetch(
+                `/api/ohlc?symbol=${encodeURIComponent(symbol)}&interval=${interval}&startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`
+            );
+            if (!response.ok) {
+                const errorData = await response.json() as any;
+                throw new Error(errorData.error?.message || 'Failed to load historical data');
+            }
+            const data = await response.json() as any;
+            let newCandles = data.candles;
+
+            if (newCandles.length > 0) {
+                // De-duplicate and get the exact number of candles needed
+                const firstCurrentCandleTime = toUnixSeconds(currentCandles[0].time);
+                newCandles = newCandles.filter((c: any) => toUnixSeconds(c.time) < firstCurrentCandleTime);
+                
+                // Take the last `candlesToFetch` candles from the new data
+                const prependedCandles = newCandles.slice(-candlesToFetch);
+
+                const combinedCandles = [...prependedCandles, ...currentCandles];
+                const newIndex = selectedIndex + prependedCandles.length;
+                setData(combinedCandles, symbol, interval, range);
+                setIndex(newIndex);
+                chartRef.current?.startCrop();
+                chartRef.current?.updateToIndex(newIndex);
+            } else {
+                // No more historical data, just use the selected index
+                setIndex(selectedIndex);
+                chartRef.current?.startCrop();
+                chartRef.current?.updateToIndex(selectedIndex);
+            }
+        } catch (err: any) {
+            setError(err.message);
+            // Fallback to original behavior on error
+            setIndex(selectedIndex);
+            chartRef.current?.startCrop();
+            chartRef.current?.updateToIndex(selectedIndex);
+        } finally {
+            setLoading(false);
+        }
+    } else {
+        setIndex(selectedIndex);
+        chartRef.current?.startCrop();
+        chartRef.current?.updateToIndex(selectedIndex);
+    }
+    setSelectMode(false);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-7xl mx-auto">
@@ -191,10 +268,7 @@ function StockSimulator() {
             <Chart
               ref={chartRef}
               selectMode={selectMode}
-              onSelectCandle={(idx) => {
-                setIndex(idx);
-                setSelectMode(false); // 选择完成后自动关闭监听
-              }}
+              onSelectCandle={handleSelectStart}
             />
           </div>
           <PlaybackControls
@@ -202,6 +276,7 @@ function StockSimulator() {
             onChangeRange={handleChangeRange}
             currentRange={range}
             onStartSelect={() => setSelectMode((v) => !v)}
+            onSelectStart={handleSelectStart}
             selecting={selectMode}
             onReset={handleReset}
             onFocusIndex={(i) => chartRef.current?.updateToIndex(i)}

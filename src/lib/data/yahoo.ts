@@ -6,7 +6,7 @@ import { SUPPORTED_INTERVALS, RANGE_LIMITS, SUPPORTED_RANGES, MAX_CANDLES, DEFAU
 
 // 输入校验
 function validateRequest(req: OHLCRequest): ErrorShape | null {
-  const { symbol, interval, range } = req;
+  const { symbol, interval, range, startDate, endDate } = req;
 
   if (!symbol || typeof symbol !== 'string' || symbol.trim() === '') {
     return { code: 'INVALID_SYMBOL', message: 'Symbol is required and must be a non-empty string' };
@@ -16,9 +16,13 @@ function validateRequest(req: OHLCRequest): ErrorShape | null {
     return { code: 'INVALID_INTERVAL', message: `Interval must be one of: ${SUPPORTED_INTERVALS.join(', ')}` };
   }
 
-  const allowedRanges = SUPPORTED_RANGES[interval];
-  if (!(allowedRanges as readonly string[]).includes(range)) {
-    return { code: 'INVALID_RANGE', message: `Range for ${interval} must be one of: ${allowedRanges.join(', ')}` };
+  if (range) {
+    const allowedRanges = SUPPORTED_RANGES[interval];
+    if (!(allowedRanges as readonly string[]).includes(range)) {
+      return { code: 'INVALID_RANGE', message: `Range for ${interval} must be one of: ${allowedRanges.join(', ')}` };
+    }
+  } else if (!startDate || !endDate) {
+    return { code: 'MISSING_PARAMS', message: "Either 'range' or both 'startDate' and 'endDate' are required" };
   }
 
   return null;
@@ -64,64 +68,72 @@ function mapToCandles(data: any[]): Candle[] {
 
 // 获取 OHLC 数据
 export async function getOHLC(
-  symbol: string,
-  interval: '1d' | '5m' | '1h' | '1wk',
-  range: string,
-  tz: string = DEFAULT_TIMEZONE
+  req: OHLCRequest
 ): Promise<{ candles: Candle[]; error?: ErrorShape }> {
-  const req: OHLCRequest = { symbol, interval, range, tz };
   const validationError = validateRequest(req);
   if (validationError) {
     return { candles: [], error: validationError };
   }
 
+  const { symbol, interval, range, startDate, endDate, tz = DEFAULT_TIMEZONE } = req;
+
   try {
-    // 计算 period1 和 period2 基于 range
-    const now = new Date();
     let period1: Date;
-    switch (range) {
-      case '1d':
-        period1 = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
-        break;
-      case '5d':
-        period1 = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
-        break;
-      case '30d':
-        period1 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        break;
-      case '60d':
-        period1 = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
-        break;
-      case '120d':
-        period1 = new Date(now.getTime() - 120 * 24 * 60 * 60 * 1000);
-        break;
-      case '3mo':
-        period1 = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-        break;
-      case '6mo':
-        period1 = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
-        break;
-      case '1y':
-        period1 = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-        break;
-      case '2y':
-        period1 = new Date(now.getTime() - 2 * 365 * 24 * 60 * 60 * 1000);
-        break;
-      case '3y':
-        period1 = new Date(now.getTime() - 3 * 365 * 24 * 60 * 60 * 1000);
-        break;
-      case '5y':
-        period1 = new Date(now.getTime() - 5 * 365 * 24 * 60 * 60 * 1000);
-        break;
-      default:
-        // 未知范围时，退化为 1y，避免后端报错
-        period1 = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-        break;
+    let period2: Date = new Date();
+
+    if (startDate && endDate) {
+      period1 = new Date(startDate);
+      period2 = new Date(endDate);
+    } else if (range) {
+      const now = new Date();
+      period2 = now;
+      switch (range) {
+        case '1d':
+          period1 = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
+          break;
+        case '5d':
+          period1 = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
+          break;
+        case '30d':
+          period1 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case '60d':
+          period1 = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+          break;
+        case '120d':
+          period1 = new Date(now.getTime() - 120 * 24 * 60 * 60 * 1000);
+          break;
+        case '3mo':
+          period1 = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        case '6mo':
+          period1 = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+          break;
+        case '1y':
+          period1 = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          break;
+        case '2y':
+          period1 = new Date(now.getTime() - 2 * 365 * 24 * 60 * 60 * 1000);
+          break;
+        case '3y':
+          period1 = new Date(now.getTime() - 3 * 365 * 24 * 60 * 60 * 1000);
+          break;
+        case '5y':
+          period1 = new Date(now.getTime() - 5 * 365 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          // 未知范围时，退化为 1y，避免后端报错
+          period1 = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          break;
+      }
+    } else {
+        return { candles: [], error: { code: 'MISSING_PARAMS', message: 'Missing range or startDate/endDate' } };
     }
+
 
     const result = await yahooFinance.chart(symbol, {
       period1,
-      period2: now,
+      period2,
       interval: interval as any, // yahoo-finance2 支持 '5m' 但类型定义不完整
     });
 

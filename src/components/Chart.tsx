@@ -4,9 +4,9 @@
 
 import { useEffect, useRef, useImperativeHandle, forwardRef, useState } from 'react';
 import { createChart, IChartApi, ISeriesApi, CandlestickData, HistogramData } from 'lightweight-charts';
-import { useReplay } from '../lib/context/ReplayContext';
-import type { Candle } from '../lib/types';
-import { CHART_HEIGHT } from '../lib/config';
+import { useReplay } from '@/lib/context/ReplayContext';
+import type { Candle } from '@/lib/types';
+
 
 export interface ChartRef {
   setData: (candles: Candle[]) => void;
@@ -252,6 +252,24 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ selectMode = false, onSelectCa
     hasAutoFittedRef.current = false;
     userAdjustedRef.current = false;
   }, [state.symbol, state.interval, state.range]);
+
+  // 当播放开始时，重置用户滚动状态并立即跳转到当前索引
+  useEffect(() => {
+    if (state.status === 'playing') {
+      userAdjustedRef.current = false; // 重新启用自动滚动
+      // 立即滚动到当前索引
+      if (chartRef.current) {
+        const ts = chartRef.current.timeScale();
+        const logicalRange = ts.getVisibleLogicalRange();
+        if (logicalRange) {
+          const lastIndex = Math.min(state.index, state.candles.length - 1);
+          const visibleWidth = logicalRange.to - logicalRange.from;
+          const targetFrom = lastIndex - visibleWidth * 0.85;
+          ts.setVisibleLogicalRange({ from: targetFrom, to: lastIndex + visibleWidth * 0.15 });
+        }
+      }
+    }
+  }, [state.status]); // 仅在播放状态改变时运行
 
 // 定位到所选索引：当非播放且未裁剪时，若当前索引不在可见范围内则自动平移
 useEffect(() => {
