@@ -14,6 +14,7 @@ export interface ChartRef {
   resetCrop: () => void;
   startCrop: () => void;
   fitContent: () => void;
+  resize: (width: number, height: number) => void;
 }
 
 interface ChartProps {
