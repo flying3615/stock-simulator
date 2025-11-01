@@ -277,10 +277,10 @@ function StockSimulator() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-2">
+    <div className="min-h-screen bg-gray-50 p-2 sm:p-4">
       <div className="max-w-full mx-auto">
 
-        <div className="mb-2">
+        <div className="mb-1 xl:mb-2">
           <TradePanel
             symbol={symbol}
             setSymbol={setSymbol}
@@ -291,8 +291,8 @@ function StockSimulator() {
           />
         </div>
 
-        <div className="space-y-2">
-          <div ref={chartWrapperRef} className={`relative bg-gray-800 p-2 rounded-lg shadow-sm h-[80vh]`}>
+        <div className="space-y-1 xl:space-y-2">
+          <div ref={chartWrapperRef} className={`relative bg-gray-800 p-4 rounded-lg shadow-sm h-[75vh] xl:h-[80vh]`}>
             <Chart
               ref={chartRef}
               selectMode={selectMode}
@@ -321,7 +321,7 @@ function StockSimulator() {
               className="fixed inset-0 z-40 bg-black/40"
               onClick={() => setLogOpen(false)}
             />
-            <div className="fixed right-0 top-0 z-50 h-full w-[420px] bg-white shadow-xl border-l border-slate-200 flex flex-col">
+            <div className="fixed right-0 top-0 z-50 h-full w-full sm:w-[420px] bg-white shadow-xl border-l border-slate-200 flex flex-col">
               <div className="p-3 border-b flex items-center justify-between">
                 <span className="font-medium text-slate-800">Trade Log</span>
                 <button
