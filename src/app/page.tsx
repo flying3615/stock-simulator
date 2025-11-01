@@ -226,7 +226,7 @@ function StockSimulator() {
         const firstCandleTime = toUnixSeconds(currentCandles[0].time) * 1000;
         const endDate = new Date(firstCandleTime);
         const dayInMillis = 24 * 60 * 60 * 1000;
-        
+
         const estimatedDaysToFetch = Math.ceil(candlesToFetch * 1.5);
         const startDate = new Date(endDate.getTime() - estimatedDaysToFetch * dayInMillis);
 
@@ -246,7 +246,7 @@ function StockSimulator() {
             if (newCandles.length > 0) {
                 const firstCurrentCandleTime = toUnixSeconds(currentCandles[0].time);
                 newCandles = newCandles.filter((c: any) => toUnixSeconds(c.time) < firstCurrentCandleTime);
-                
+
                 const prependedCandles = newCandles.slice(-candlesToFetch);
 
                 const combinedCandles = [...prependedCandles, ...currentCandles];
@@ -276,6 +276,35 @@ function StockSimulator() {
     setSelectMode(false);
   };
 
+  const handleRandomStock = async (newSymbol: string) => {
+    // Load data for the random stock
+    setLoading(true);
+    setError(null);
+    try {
+      const effectiveRange = RANGE_LIMITS[interval];
+      const response = await fetch(
+        `/api/ohlc?symbol=${encodeURIComponent(newSymbol)}&interval=${interval}&range=${effectiveRange}`
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json() as any;
+        throw new Error(errorData.error?.message || 'Failed to load data');
+      }
+
+      const data = await response.json() as any;
+      setData(data.candles, newSymbol, interval, effectiveRange);
+
+      // Reset chart view to show all data
+      setTimeout(() => {
+        chartRef.current?.fitContent();
+      }, 100);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-2 sm:p-4">
       <div className="max-w-full mx-auto">
@@ -288,6 +317,7 @@ function StockSimulator() {
             loading={loading}
             error={error}
             onOpenLog={() => setLogOpen(true)}
+            onRandomStock={handleRandomStock}
           />
         </div>
 

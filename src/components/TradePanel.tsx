@@ -1,4 +1,4 @@
-// 交易面板组件 v0.2
+// 交易面板组件 v0.3
 
 'use client';
 
@@ -7,20 +7,23 @@ import { useReplay } from '@/lib/context/ReplayContext';
 import { usePortfolio } from '@/lib/context/PortfolioContext';
 import { DEFAULT_QTY } from '@/lib/config';
 import PortfolioInfo from './PortfolioInfo';
+import { getSp500Stocks, getQqqStocks } from '@/lib/stockPools';
 
 interface TradePanelProps {
-  symbol: string;
-  setSymbol: (symbol: string) => void;
-  handleLoad: () => void;
-  loading: boolean;
-  error: string | null;
-  onOpenLog: () => void;
+   symbol: string;
+   setSymbol: (symbol: string) => void;
+   handleLoad: () => void;
+   loading: boolean;
+   error: string | null;
+   onOpenLog: () => void;
+   onRandomStock?: (symbol: string) => void;
 }
 
-const TradePanel = ({ symbol, setSymbol, handleLoad, loading, error, onOpenLog }: TradePanelProps) => {
+const TradePanel = ({ symbol, setSymbol, handleLoad, loading, error, onOpenLog, onRandomStock }: TradePanelProps) => {
   const { state: replayState } = useReplay();
   const { portfolio, executeOrder, resetPortfolio } = usePortfolio();
   const [qty, setQty] = useState(DEFAULT_QTY);
+  const [randomLoading, setRandomLoading] = useState(false);
 
   const currentCandle = replayState.candles[replayState.index];
   const currentPrice = currentCandle?.close || 0;
@@ -63,6 +66,36 @@ const TradePanel = ({ symbol, setSymbol, handleLoad, loading, error, onOpenLog }
   };
 
 
+  const handleRandomSp500 = async () => {
+    if (randomLoading) return;
+    setRandomLoading(true);
+    try {
+      const stocks = await getSp500Stocks();
+      const randomSymbol = stocks[Math.floor(Math.random() * stocks.length)];
+      setSymbol(randomSymbol);
+      onRandomStock?.(randomSymbol);
+    } catch (error) {
+      console.error('Failed to get random SP500 stock:', error);
+    } finally {
+      setRandomLoading(false);
+    }
+  };
+
+  const handleRandomQqq = async () => {
+    if (randomLoading) return;
+    setRandomLoading(true);
+    try {
+      const stocks = await getQqqStocks();
+      const randomSymbol = stocks[Math.floor(Math.random() * stocks.length)];
+      setSymbol(randomSymbol);
+      onRandomStock?.(randomSymbol);
+    } catch (error) {
+      console.error('Failed to get random QQQ stock:', error);
+    } finally {
+      setRandomLoading(false);
+    }
+  };
+
   return (
     <div className="bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200 rounded-xl shadow-lg p-4">
       {/* Mobile-first responsive layout */}
@@ -88,6 +121,22 @@ const TradePanel = ({ symbol, setSymbol, handleLoad, loading, error, onOpenLog }
             className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 shadow-sm flex-shrink-0"
           >
             {loading ? 'Loading...' : 'Load'}
+          </button>
+          <button
+            onClick={handleRandomSp500}
+            disabled={randomLoading}
+            className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+            title="Random SP500 Stock"
+          >
+            {randomLoading ? '...' : 'SP500'}
+          </button>
+          <button
+            onClick={handleRandomQqq}
+            disabled={randomLoading}
+            className="px-2 py-1 bg-purple-500 text-white rounded text-xs hover:bg-purple-600 disabled:opacity-50"
+            title="Random QQQ Stock"
+          >
+            {randomLoading ? '...' : 'QQQ'}
           </button>
 
           <div className="h-8 w-px bg-slate-300" />
