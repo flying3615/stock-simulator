@@ -66,8 +66,20 @@ const TradeLog = () => {
         <p className="text-slate-600">No trades yet.</p>
       ) : (
         <>
-          {/* Export Button */}
-          <div className="mb-4 flex justify-end">
+          {/* Action Buttons */}
+          <div className="mb-4 flex justify-end gap-2">
+            <button
+              onClick={() => {
+                // Store data in localStorage for the new page
+                localStorage.setItem('tradeStats_trades', JSON.stringify(trades));
+                localStorage.setItem('tradeStats_symbol', replayState.symbol || '');
+                window.open('/trade-stats', '_blank');
+              }}
+              className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 transition-colors duration-200 shadow-sm"
+              title="View trading statistics chart"
+            >
+              View Chart
+            </button>
             <button
               onClick={exportToCSV}
               className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors duration-200 shadow-sm"
