@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useReplay } from '@/lib/context/ReplayContext';
 import { usePortfolio } from '@/lib/context/PortfolioContext';
 import { DEFAULT_QTY } from '@/lib/config';
@@ -28,6 +28,22 @@ const TradePanel = ({ symbol, setSymbol, handleLoad, loading, error, onOpenLog }
   // Debug: Log current candle info
   console.log('Current candle:', currentCandle, 'Price:', currentPrice, 'Index:', replayState.index, 'Total candles:', replayState.candles.length);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'f' || event.key === 'F') {
+        event.preventDefault();
+        handleBuy();
+      } else if (event.key === 'd' || event.key === 'D') {
+        event.preventDefault();
+        handleSell();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [qty, currentCandle, executeOrder, currentPrice]);
+
   const handleBuy = () => {
     if (qty <= 0 || !currentCandle) return;
     executeOrder(
@@ -46,23 +62,6 @@ const TradePanel = ({ symbol, setSymbol, handleLoad, loading, error, onOpenLog }
     );
   };
 
-  const handleShort = () => {
-    if (qty <= 0 || !currentCandle) return;
-    executeOrder(
-      { side: 'short', qty },
-      currentPrice,
-      Number(currentCandle.time)
-    );
-  };
-
-  const handleCover = () => {
-    if (qty <= 0 || !currentCandle) return;
-    executeOrder(
-      { side: 'cover', qty },
-      currentPrice,
-      Number(currentCandle.time)
-    );
-  };
 
   return (
     <div className="bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200 rounded-xl shadow-lg p-4">
@@ -152,26 +151,10 @@ const TradePanel = ({ symbol, setSymbol, handleLoad, loading, error, onOpenLog }
             <button
               onClick={handleSell}
               className="px-3 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 shadow-sm"
-              disabled={!currentCandle || qty <= 0 || portfolio.positionQty <= 0}
-              title="Sell Long Position"
+              disabled={!currentCandle || qty <= 0}
+              title="Sell Position"
             >
               Sell
-            </button>
-            <button
-              onClick={handleShort}
-              className="px-3 py-2 bg-amber-600 text-white rounded-md text-sm font-medium hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 shadow-sm"
-              disabled={!currentCandle || qty <= 0}
-              title="Short Sell"
-            >
-              Short
-            </button>
-            <button
-              onClick={handleCover}
-              className="px-3 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 shadow-sm"
-              disabled={!currentCandle || qty <= 0 || portfolio.positionQty >= 0}
-              title="Cover Short Position"
-            >
-              Cover
             </button>
           </div>
 

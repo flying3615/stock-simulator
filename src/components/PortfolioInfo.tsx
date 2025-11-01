@@ -13,7 +13,7 @@ const PortfolioInfo = () => {
   const currentPrice = currentCandle?.close || 0;
 
   return (
-    <div className="flex flex-col gap-1 text-xs border-t lg:border-t-0 lg:border-l lg:pl-4 pt-4 lg:pt-0 min-w-0">
+    <div className="flex flex-col gap-1 text-sm border-t lg:border-t-0 lg:border-l lg:pl-4 pt-4 lg:pt-0 min-w-0">
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1">
           <span className="font-medium text-slate-600">Price:</span>
