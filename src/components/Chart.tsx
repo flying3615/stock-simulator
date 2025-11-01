@@ -131,7 +131,7 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ selectMode = false, onSelectCa
   // Conditional listener for selectMode
   useEffect(() => {
     const chart = chartRef.current;
-    if (!chart || !selectMode) return;
+    if (!chart) return;
 
     const handler = (param: any) => {
       if (!param || param.time == null) return;
@@ -148,16 +148,21 @@ const Chart = forwardRef<ChartRef, ChartProps>(({ selectMode = false, onSelectCa
         }
       }
 
-      try {
-        onSelectCandle?.(closestIndex);
-      } finally {
-        setClipActive(true);
+      if (selectMode) {
+        try {
+          onSelectCandle?.(closestIndex);
+        } finally {
+          setClipActive(true);
+        }
+      } else {
+        // Always allow clicking to set index when not in selectMode
+        setIndex(closestIndex);
       }
     };
 
     chart.subscribeClick(handler);
     return () => chart.unsubscribeClick(handler);
-  }, [selectMode, state.candles, onSelectCandle]);
+  }, [selectMode, state.candles, onSelectCandle, setIndex]);
 
   // Update data
   useEffect(() => {
