@@ -24,6 +24,9 @@ const TradePanel = ({ symbol, setSymbol, handleLoad, loading, error, onOpenLog }
   const currentCandle = replayState.candles[replayState.index];
   const currentPrice = currentCandle?.close || 0;
 
+  // Debug: Log current candle info
+  console.log('Current candle:', currentCandle, 'Price:', currentPrice, 'Index:', replayState.index, 'Total candles:', replayState.candles.length);
+
   const handleBuy = () => {
     if (qty <= 0 || !currentCandle) return;
     executeOrder(
@@ -61,92 +64,178 @@ const TradePanel = ({ symbol, setSymbol, handleLoad, loading, error, onOpenLog }
   };
 
   return (
-    <div className="flex flex-col gap-2 p-3 bg-white border rounded-lg shadow-sm">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-            className="px-2 py-1 border rounded text-sm text-slate-400 w-20"
-            placeholder="AAPL"
-          />
+    <div className="bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200 rounded-xl shadow-lg p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {/* Symbol Input */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-semibold text-slate-700">Symbol:</label>
+            <input
+              type="text"
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+              className="px-3 py-2 border border-slate-300 rounded-md text-sm font-mono bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-24"
+              placeholder="AAPL"
+            />
+          </div>
+
+          {/* Load Button */}
           <button
             onClick={handleLoad}
             disabled={loading}
-            className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:opacity-50"
+            className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 shadow-sm"
           >
-            {loading ? '...' : 'Load'}
+            {loading ? 'Loading...' : 'Load Data'}
           </button>
-          <div className="mx-2 h-6 w-px bg-slate-300" />
-          <input
-            type="number"
-            value={qty}
-            onChange={(e) => setQty(parseInt(e.target.value, 10) || 0)}
-            min="1"
-            className="px-2 py-1 border rounded w-16 text-xs text-slate-400"
-          />
-          <div className="flex gap-1 ml-2">
+
+          <div className="h-8 w-px bg-slate-300" />
+
+          {/* Quantity Input with Position Sizing */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-semibold text-slate-700">Qty:</label>
+            <input
+              type="number"
+              value={qty}
+              onChange={(e) => setQty(parseInt(e.target.value, 10) || 0)}
+              min="1"
+              className="px-3 py-2 border border-slate-300 rounded-md w-20 text-sm bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <div className="flex gap-1">
+              <button
+                onClick={() => setQty(Math.floor(portfolio.cash / currentPrice))}
+                className="px-2 py-1 bg-slate-500 text-white rounded text-xs hover:bg-slate-600 transition-colors duration-200"
+                title="Full Position"
+              >
+                100%
+              </button>
+              <button
+                onClick={() => setQty(Math.floor((portfolio.cash / 2) / currentPrice))}
+                className="px-2 py-1 bg-slate-500 text-white rounded text-xs hover:bg-slate-600 transition-colors duration-200"
+                title="Half Position"
+              >
+                50%
+              </button>
+              <button
+                onClick={() => setQty(Math.floor((portfolio.cash / 3) / currentPrice))}
+                className="px-2 py-1 bg-slate-500 text-white rounded text-xs hover:bg-slate-600 transition-colors duration-200"
+                title="1/3 Position"
+              >
+                33%
+              </button>
+              <button
+                onClick={() => setQty(Math.floor((portfolio.cash / 4) / currentPrice))}
+                className="px-2 py-1 bg-slate-500 text-white rounded text-xs hover:bg-slate-600 transition-colors duration-200"
+                title="1/4 Position"
+              >
+                25%
+              </button>
+            </div>
+          </div>
+
+          <div className="h-8 w-px bg-slate-300" />
+
+          {/* Trading Buttons */}
+          <div className="flex gap-2">
             <button
               onClick={handleBuy}
-              className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+              className="px-3 py-2 bg-emerald-600 text-white rounded-md text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 shadow-sm"
               disabled={!currentCandle || qty <= 0}
-              title="Buy"
+              title="Buy Long Position"
             >
               Buy
             </button>
             <button
               onClick={handleSell}
-              className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 disabled:opacity-50"
+              className="px-3 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 shadow-sm"
               disabled={!currentCandle || qty <= 0 || portfolio.positionQty <= 0}
-              title="Sell"
+              title="Sell Long Position"
             >
               Sell
             </button>
-            <div className="mx-1 h-6 w-px bg-slate-400" />
+            <div className="h-8 w-px bg-slate-300" />
             <button
               onClick={handleShort}
-              className="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600 disabled:opacity-50"
+              className="px-3 py-2 bg-amber-600 text-white rounded-md text-sm font-medium hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 shadow-sm"
               disabled={!currentCandle || qty <= 0}
-              title="Short"
+              title="Short Sell"
             >
               Short
             </button>
             <button
               onClick={handleCover}
-              className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 disabled:opacity-50"
+              className="px-3 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 shadow-sm"
               disabled={!currentCandle || qty <= 0 || portfolio.positionQty >= 0}
-              title="Cover"
+              title="Cover Short Position"
             >
               Cover
             </button>
           </div>
+
+          <div className="h-8 w-px bg-slate-300" />
+
+          {/* Portfolio Info - Inline with buttons */}
+          <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-slate-700">Price:</span>
+              <span className="text-blue-600 font-bold">${currentPrice.toFixed(2)}</span>
+            </div>
+            <div className="h-6 w-px bg-slate-300" />
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-slate-700">Cash:</span>
+              <span className="text-emerald-600 font-bold">${portfolio.cash.toFixed(0)}</span>
+            </div>
+            <div className="h-6 w-px bg-slate-300" />
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-slate-700">Pos:</span>
+              <span className="text-purple-600 font-bold">{portfolio.positionQty} @ ${portfolio.avgPrice.toFixed(2)}</span>
+            </div>
+            <div className="h-6 w-px bg-slate-300" />
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-slate-700">Equity:</span>
+              <span className="text-indigo-600 font-bold">${portfolio.equity.toFixed(0)}</span>
+            </div>
+            <div className="h-6 w-px bg-slate-300" />
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-slate-700">P&L:</span>
+              <span className={portfolio.pnlUnrealized >= 0 ? 'text-emerald-600' : 'text-red-600'}>
+                ${portfolio.pnlUnrealized.toFixed(0)}
+              </span>
+              <span className="text-slate-400 mx-1">/</span>
+              <span className={portfolio.pnlRealized >= 0 ? 'text-emerald-600' : 'text-red-600'}>
+                ${portfolio.pnlRealized.toFixed(0)}
+              </span>
+            </div>
+          </div>
+
+          <div className="h-8 w-px bg-slate-300" />
+
+          {/* Reset Button */}
           <button
             onClick={resetPortfolio}
-            className="ml-2 px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+            className="px-3 py-2 bg-slate-600 text-white rounded-md text-sm font-medium hover:bg-slate-700 transition-colors duration-200 shadow-sm"
             title="Reset Portfolio"
           >
             Reset
           </button>
+
         </div>
+
+        {/* Log Button */}
         <button
           onClick={onOpenLog}
-          className="px-2 py-1 bg-slate-700 text-white rounded text-sm hover:bg-slate-800"
-          title="Trade Log"
+          className="px-4 py-2 bg-slate-800 text-white rounded-md text-sm font-medium hover:bg-slate-900 transition-colors duration-200 shadow-sm"
+          title="View Trade Log"
         >
-          Log
+          Trade Log
         </button>
       </div>
-      {error && <p className="text-red-500 text-xs">{error}</p>}
 
-      {/* Compact info */}
-      <div className="flex items-center gap-4 text-sm font-medium text-slate-900">
-        <span>Price: <span className="text-blue-600">${currentPrice.toFixed(2)}</span></span>
-        <span>Cash: <span className="text-green-600">${portfolio.cash.toFixed(0)}</span></span>
-        <span>Pos: <span className="text-purple-600">{portfolio.positionQty} @ ${portfolio.avgPrice.toFixed(2)}</span></span>
-        <span>Equity: <span className="text-indigo-600">${portfolio.equity.toFixed(0)}</span></span>
-        <span>P&L: <span className={portfolio.pnlUnrealized >= 0 ? 'text-green-600' : 'text-red-600'}>${portfolio.pnlUnrealized.toFixed(0)}</span> / <span className={portfolio.pnlRealized >= 0 ? 'text-green-600' : 'text-red-600'}>${portfolio.pnlRealized.toFixed(0)}</span></span>
-      </div>
+      {/* Error Message */}
+      {error && (
+        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-red-700 text-sm font-medium">{error}</p>
+        </div>
+      )}
     </div>
   );
 };

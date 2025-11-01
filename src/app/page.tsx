@@ -277,10 +277,10 @@ function StockSimulator() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 p-2">
+      <div className="max-w-full mx-auto">
 
-        <div className="mb-4">
+        <div className="mb-2">
           <TradePanel
             symbol={symbol}
             setSymbol={setSymbol}
@@ -291,8 +291,8 @@ function StockSimulator() {
           />
         </div>
 
-        <div className="space-y-4">
-          <div ref={chartWrapperRef} className={`relative bg-gray-800 p-4 rounded-lg shadow-sm h-[70vh] ${isFullscreen ? 'fullscreen-chart-wrapper' : ''}`}>
+        <div className="space-y-2">
+          <div ref={chartWrapperRef} className={`relative bg-gray-800 p-2 rounded-lg shadow-sm h-[80vh]`}>
             <Chart
               ref={chartRef}
               selectMode={selectMode}
